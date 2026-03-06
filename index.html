@@ -11,20 +11,23 @@
 body{
 font-family: Arial, sans-serif;
 background:#f3f4f6;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
 margin:0;
+padding:30px;
+}
+
+.container{
+display:flex;
+flex-wrap:wrap;
+gap:20px;
+justify-content:center;
 }
 
 .card{
 background:white;
-padding:30px;
+padding:20px;
 border-radius:12px;
 box-shadow:0 10px 25px rgba(0,0,0,0.1);
-width:320px;
-text-align:left;
+width:260px;
 }
 
 h2{
@@ -50,14 +53,6 @@ button:hover{
 background:#1d4ed8;
 }
 
-input{
-width:100%;
-padding:10px;
-border-radius:6px;
-border:1px solid #ccc;
-margin-top:10px;
-}
-
 .botao-mapa{
 background:#10b981;
 }
@@ -66,13 +61,21 @@ background:#10b981;
 background:#059669;
 }
 
+input{
+width:100%;
+padding:10px;
+border-radius:6px;
+border:1px solid #ccc;
+margin-top:10px;
+}
+
 </style>
 
 </head>
 
 <body>
 
-<div id="resultado"></div>
+<div id="resultado" class="container"></div>
 
 <script>
 
@@ -81,25 +84,32 @@ const supabaseKey = 'sb_publishable_rppr0kLef4HDaYC8gHDrbg_LXggzCFL'
 
 const client = supabase.createClient(supabaseUrl, supabaseKey)
 
-let territorioAtual = null
 let diaAtual = null
+let territorioAtual = null
 
-async function verDia(dia){
+const dias = [
+"domingo",
+"segunda-feira",
+"terça-feira",
+"quarta-feira",
+"quinta-feira",
+"sexta-feira",
+"sábado"
+]
 
-diaAtual = dia
+async function carregarSemana(){
 
-const { data, error } = await client
+document.getElementById("resultado").innerHTML = ""
+
+for(let dia of dias){
+
+const { data } = await client
 .from('territorio_em_uso')
 .select('*')
 .eq('dia_semana', dia)
 .single()
 
-if(error || !data){
-document.getElementById("resultado").innerHTML = "Erro ao carregar território"
-return
-}
-
-territorioAtual = data
+if(!data) continue
 
 const { data: territorio } = await client
 .from('territorios')
@@ -107,7 +117,7 @@ const { data: territorio } = await client
 .eq('id', data.territorio_id)
 .single()
 
-document.getElementById("resultado").innerHTML = `
+document.getElementById("resultado").innerHTML += `
 
 <div class="card">
 
@@ -125,13 +135,15 @@ document.getElementById("resultado").innerHTML = `
 
 ${data.status === "disponivel" ? `
 
-<input id="nome" placeholder="Digite seu nome">
+<input id="nome-${dia}" placeholder="Digite seu nome">
 
-<button onclick="pegarTerritorio()">Pegar território</button>
+<button onclick="pegarTerritorio('${dia}')">Pegar território</button>
 
 ` : `
 
-<button onclick="concluirTerritorio()">Concluir território</button>
+<button onclick="concluirTerritorio('${dia}', ${data.territorio_id}, '${data.responsavel}')">
+Concluir território
+</button>
 
 `}
 
@@ -141,9 +153,11 @@ ${data.status === "disponivel" ? `
 
 }
 
-async function pegarTerritorio(){
+}
 
-const nome = document.getElementById("nome").value
+async function pegarTerritorio(dia){
+
+const nome = document.getElementById(`nome-${dia}`).value
 
 if(!nome){
 alert("Digite seu nome")
@@ -153,12 +167,12 @@ return
 const { data: atual } = await client
 .from('territorio_em_uso')
 .select('*')
-.eq('dia_semana', diaAtual)
+.eq('dia_semana', dia)
 .single()
 
 if(!atual || atual.status !== "disponivel"){
 alert("Este território acabou de ser reservado por outro irmão.")
-verDia(diaAtual)
+carregarSemana()
 return
 }
 
@@ -169,45 +183,38 @@ responsavel: nome,
 status: "em andamento",
 data_de_retirada: new Date()
 })
-.eq('dia_semana', diaAtual)
+.eq('dia_semana', dia)
 
 alert("Território reservado!")
 
-verDia(diaAtual)
+carregarSemana()
 
 }
 
-async function concluirTerritorio(){
-
-const atual = territorioAtual.territorio_id
+async function concluirTerritorio(dia, territorioId, responsavel){
 
 await client
 .from('historico')
 .insert({
-territorio: atual,
-responsavel: territorioAtual.responsavel,
-dia_semana: diaAtual,
+territorio: territorioId,
+responsavel: responsavel,
+dia_semana: dia,
 data_conclusao: new Date()
 })
 
-// pegar todos territórios ordenados
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 .order('numero', { ascending: true })
 
-// descobrir posição do atual
-let indexAtual = territorios.findIndex(t => t.id === atual)
+let indexAtual = territorios.findIndex(t => t.id === territorioId)
 
-// escolher próximo
 let proximo = territorios[indexAtual + 1]
 
-// se chegou no final volta para o primeiro
 if(!proximo){
 proximo = territorios[0]
 }
 
-// atualizar território
 await client
 .from('territorio_em_uso')
 .update({
@@ -215,28 +222,15 @@ territorio_id: proximo.id,
 responsavel: null,
 status: "disponivel"
 })
-.eq('dia_semana', diaAtual)
+.eq('dia_semana', dia)
 
 alert("Território concluído!")
 
-verDia(diaAtual)
+carregarSemana()
 
 }
 
-// detectar dia atual
-const dias = [
-"domingo",
-"segunda-feira",
-"terça-feira",
-"quarta-feira",
-"quinta-feira",
-"sexta-feira",
-"sábado"
-]
-
-const hoje = new Date().getDay()
-
-verDia(dias[hoje])
+carregarSemana()
 
 </script>
 
