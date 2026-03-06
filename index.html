@@ -199,13 +199,18 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
-/* territórios já em uso */
+/* territórios usados nesta semana */
 
-const { data: emUso } = await client
-.from('territorio_em_uso')
-.select('territorio_id')
+const hoje = new Date()
+const inicioSemana = new Date(hoje)
+inicioSemana.setDate(hoje.getDate() - hoje.getDay())
 
-const usadosSemana = emUso.map(t => t.territorio_id)
+const { data: historicoSemana } = await client
+.from('historico')
+.select('territorio')
+.gte('data_conclusao', inicioSemana.toISOString())
+
+const usadosSemana = historicoSemana.map(t => parseInt(t.territorio))
 
 /* pegar contador */
 
@@ -229,7 +234,7 @@ proximo = 1
 
 }
 
-/* remover território de outros dias */
+/* remover território duplicado */
 
 await client
 .from('territorio_em_uso')
