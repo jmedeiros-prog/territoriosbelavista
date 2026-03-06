@@ -2,6 +2,7 @@
 <html>
 
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -140,11 +141,17 @@ document.getElementById("resultado").innerHTML = `
 <button>Ver mapa</button>
 </a>
 
+${data.status === "disponivel" ? `
+
 <input id="nome" placeholder="Digite seu nome">
 
 <button onclick="pegarTerritorio()">Pegar território</button>
 
+` : `
+
 <button onclick="concluirTerritorio()">Concluir território</button>
+
+`}
 
 </div>
 
@@ -180,7 +187,7 @@ async function concluirTerritorio(){
 
 const atual = territorioAtual.territorio_id
 
-// buscar dados do território
+// buscar território atual
 const { data: territorio } = await client
 .from('territorios')
 .select('*')
@@ -223,7 +230,7 @@ proximoId = primeiro.id
 
 }
 
-// atualizar dia
+// atualizar território do dia
 await client
 .from('territorio_em_uso')
 .update({
@@ -234,11 +241,26 @@ data_conclusao: new Date()
 })
 .eq('dia_semana', diaAtual)
 
-alert("Território concluído e registrado no histórico!")
+alert("Território concluído!")
 
 verDia(diaAtual)
 
 }
+
+// abrir automaticamente no dia atual
+const dias = [
+"domingo",
+"segunda-feira",
+"terça-feira",
+"quarta-feira",
+"quinta-feira",
+"sexta-feira",
+"sábado"
+]
+
+const hoje = new Date().getDay()
+
+verDia(dias[hoje])
 
 </script>
 
