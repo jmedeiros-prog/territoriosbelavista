@@ -1,3 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Territórios</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+</head>
+<body>
+
+<div id="resultado"></div>
+
 <script>
 
 const supabaseUrl = 'https://mtokqolvifjuzxcxuxph.supabase.co'
@@ -33,7 +46,7 @@ const { data: territorio } = await client
 
 document.getElementById("resultado").innerHTML = `
 
-<div class="card">
+<div style="border:1px solid #ccc;padding:20px;border-radius:10px;width:300px">
 
 <h2>${dia}</h2>
 
@@ -49,12 +62,15 @@ document.getElementById("resultado").innerHTML = `
 
 ${data.status === "disponivel" ? `
 
+<br><br>
 <input id="nome" placeholder="Digite seu nome">
 
+<br><br>
 <button onclick="pegarTerritorio()">Pegar território</button>
 
 ` : `
 
+<br><br>
 <button onclick="concluirTerritorio()">Concluir território</button>
 
 `}
@@ -123,14 +139,14 @@ const { data: usadosDia } = await client
 .select('territorio')
 .eq('dia_semana', diaAtual)
 
-const usadosNesseDia = usadosDia.map(t => parseInt(t.territorio))
+const usadosNesseDia = (usadosDia || []).map(t => parseInt(t.territorio))
 
 // territórios em uso na semana
 const { data: emUso } = await client
 .from('territorio_em_uso')
 .select('territorio_id')
 
-const usadosSemana = emUso.map(t => t.territorio_id)
+const usadosSemana = (emUso || []).map(t => t.territorio_id)
 
 // todos territórios
 const { data: territorios } = await client
@@ -147,7 +163,6 @@ let candidatos = territorios.filter(t =>
 if(candidatos.length === 0){
 
 alert("Sem território disponível. Contatar Servo de Território.")
-
 return
 
 }
@@ -187,3 +202,6 @@ const hoje = new Date().getDay()
 verDia(dias[hoje])
 
 </script>
+
+</body>
+</html>
