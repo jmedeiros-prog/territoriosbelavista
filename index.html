@@ -229,6 +229,17 @@ proximo = 1
 
 }
 
+/* remover território de outros dias */
+
+await client
+.from('territorio_em_uso')
+.update({
+territorio_id: null,
+responsavel: null,
+status: "disponivel"
+})
+.eq('territorio_id', proximo)
+
 /* atualizar contador */
 
 let novoProximo = proximo + 1
