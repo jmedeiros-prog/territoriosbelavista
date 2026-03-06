@@ -84,6 +84,8 @@ const supabaseKey = 'sb_publishable_rppr0kLef4HDaYC8gHDrbg_LXggzCFL'
 
 const client = supabase.createClient(supabaseUrl, supabaseKey)
 
+const TOTAL_TERRITORIOS = 9
+
 const dias = [
 "domingo",
 "segunda-feira",
@@ -173,18 +175,6 @@ alert("Digite seu nome")
 return
 }
 
-const { data: atual } = await client
-.from('territorio_em_uso')
-.select('*')
-.eq('dia_semana', dia)
-.single()
-
-if(!atual || atual.status !== "disponivel"){
-alert("Este território acabou de ser reservado.")
-carregarSemana()
-return
-}
-
 await client
 .from('territorio_em_uso')
 .update({
@@ -209,55 +199,35 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
-const { data: emUso } = await client
-.from('territorio_em_uso')
-.select('territorio_id')
+/* pegar próximo território da rotação */
 
-const usadosSemana = emUso
-.filter(t => t.territorio_id !== territorioId)
-.map(t => t.territorio_id)
-
-const { data: territorios } = await client
-.from('territorios')
+const { data: controle } = await client
+.from('controle_rotacao')
 .select('*')
-.order('numero', { ascending: true })
+.eq('id',1)
+.single()
 
-let indexAtual = territorios.findIndex(t => t.id === territorioId)
+let proximo = controle.proximo_territorio
 
-let proximo = null
+/* atualizar contador */
 
-for(let i = indexAtual + 1; i < territorios.length; i++){
+let novoProximo = proximo + 1
 
-if(!usadosSemana.includes(territorios[i].id)){
-proximo = territorios[i]
-break
+if(novoProximo > TOTAL_TERRITORIOS){
+novoProximo = 1
 }
 
-}
+await client
+.from('controle_rotacao')
+.update({ proximo_territorio: novoProximo })
+.eq('id',1)
 
-if(!proximo){
-
-alert("Sem território disponível. Contatar Servo de Território.")
+/* atualizar território do dia */
 
 await client
 .from('territorio_em_uso')
 .update({
-territorio_id: null,
-responsavel: null,
-status: "disponivel"
-})
-.eq('dia_semana', dia)
-
-carregarSemana()
-
-return
-
-}
-
-await client
-.from('territorio_em_uso')
-.update({
-territorio_id: proximo.id,
+territorio_id: proximo,
 responsavel: null,
 status: "disponivel"
 })
