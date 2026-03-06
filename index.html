@@ -208,7 +208,7 @@ const { data: historicoSemana } = await client
 .select('territorio')
 .gte('data_conclusao', inicioSemana.toISOString())
 
-const usadosSemana = historicoSemana.map(t => parseInt(t.territorio))
+const usadosSemana = historicoSemana ? historicoSemana.map(t => parseInt(t.territorio)) : []
 
 const { data: controle } = await client
 .from('controle_rotacao')
@@ -262,6 +262,17 @@ carregarSemana()
 }
 
 carregarSemana()
+
+client
+.channel('territorios')
+.on(
+'postgres_changes',
+{ event: '*', schema: 'public', table: 'territorio_em_uso' },
+payload => {
+carregarSemana()
+}
+)
+.subscribe()
 
 </script>
 
