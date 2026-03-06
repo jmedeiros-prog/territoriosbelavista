@@ -199,8 +199,6 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
-/* territórios usados nesta semana */
-
 const hoje = new Date()
 const inicioSemana = new Date(hoje)
 inicioSemana.setDate(hoje.getDate() - hoje.getDay())
@@ -212,42 +210,25 @@ const { data: historicoSemana } = await client
 
 const usadosSemana = historicoSemana.map(t => parseInt(t.territorio))
 
-/* pegar contador */
-
 const { data: controle } = await client
 .from('controle_rotacao')
 .select('proximo_territorio')
 .eq('id',1)
 .single()
 
-let proximo = controle.proximo_territorio
+let candidato = controle.proximo_territorio
 
-/* pular territórios já usados */
+while(usadosSemana.includes(candidato)){
 
-while(usadosSemana.includes(proximo)){
+candidato++
 
-proximo++
-
-if(proximo > TOTAL_TERRITORIOS){
-proximo = 1
+if(candidato > TOTAL_TERRITORIOS){
+candidato = 1
 }
 
 }
 
-/* remover território duplicado */
-
-await client
-.from('territorio_em_uso')
-.update({
-territorio_id: null,
-responsavel: null,
-status: "disponivel"
-})
-.eq('territorio_id', proximo)
-
-/* atualizar contador */
-
-let novoProximo = proximo + 1
+let novoProximo = candidato + 1
 
 if(novoProximo > TOTAL_TERRITORIOS){
 novoProximo = 1
@@ -258,12 +239,19 @@ await client
 .update({ proximo_territorio: novoProximo })
 .eq('id',1)
 
-/* atualizar território do dia */
+await client
+.from('territorio_em_uso')
+.update({
+territorio_id: null,
+responsavel: null,
+status: "disponivel"
+})
+.eq('territorio_id', candidato)
 
 await client
 .from('territorio_em_uso')
 .update({
-territorio_id: proximo,
+territorio_id: candidato,
 responsavel: null,
 status: "disponivel"
 })
