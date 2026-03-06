@@ -74,6 +74,20 @@ alert("Digite seu nome")
 return
 }
 
+// verifica novamente no banco
+const { data: atual } = await client
+.from('territorio_em_uso')
+.select('*')
+.eq('dia_semana', diaAtual)
+.single()
+
+if(atual.status !== "disponivel"){
+alert("Este território acabou de ser reservado por outro irmão.")
+verDia(diaAtual)
+return
+}
+
+// reserva território
 await client
 .from('territorio_em_uso')
 .update({
@@ -93,7 +107,7 @@ async function concluirTerritorio(){
 
 const atual = territorioAtual.territorio_id
 
-// pega dados do território atual
+// pega território atual
 const { data: territorio } = await client
 .from('territorios')
 .select('*')
@@ -118,7 +132,7 @@ const { data: historico } = await client
 
 const usadosNoDia = historico.map(h => h.territorio)
 
-// pega todos os territórios
+// pegar todos territórios
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
@@ -138,14 +152,14 @@ let candidatos = territorios.filter(t =>
 !usadosSemana.includes(t.id)
 )
 
-// se todos já foram usados no dia, reinicia ciclo do dia
+// se todos já usados no dia, reinicia ciclo
 if(candidatos.length === 0){
 candidatos = territorios.filter(t =>
 !usadosSemana.includes(t.id)
 )
 }
 
-// escolher território menos usado
+// escolher menos usado
 let menorUso = Infinity
 let escolhido = null
 
@@ -163,7 +177,7 @@ escolhido = t
 
 }
 
-// atualiza território do dia
+// atualiza dia com novo território
 await client
 .from('territorio_em_uso')
 .update({
