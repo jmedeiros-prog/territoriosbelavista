@@ -200,9 +200,45 @@ verDia(diaAtual)
 
 async function concluirTerritorio(){
 
+const atual = territorioAtual.territorio_id
+
+// salvar histórico
+await client
+.from('historico')
+.insert({
+territorio: atual,
+responsavel: territorioAtual.responsavel,
+dia_semana: diaAtual,
+data_conclusao: new Date()
+})
+
+// buscar territórios que estão em uso
+const { data: emUso } = await client
+.from('territorio_em_uso')
+.select('territorio_id')
+
+// pegar lista de IDs em uso
+const usados = emUso.map(t => t.territorio_id)
+
+// buscar todos territórios
+const { data: territorios } = await client
+.from('territorios')
+.select('*')
+.order('id')
+
+// procurar próximo território livre
+let proximo = territorios.find(t => !usados.includes(t.id))
+
+// se todos estiverem usados, volta para o primeiro
+if(!proximo){
+proximo = territorios[0]
+}
+
+// atualizar o território do dia
 await client
 .from('territorio_em_uso')
 .update({
+territorio_id: proximo.id,
 responsavel: null,
 status: "disponivel"
 })
@@ -232,4 +268,5 @@ verDia(dias[hoje])
 
 </body>
 </html>
+
 
