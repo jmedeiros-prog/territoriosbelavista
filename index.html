@@ -32,6 +32,7 @@ width:260px;
 
 h2{
 margin-top:0;
+text-transform:capitalize;
 }
 
 p{
@@ -107,11 +108,19 @@ const { data } = await client
 
 if(!data) continue
 
-const { data: territorio } = await client
+let territorio = null
+
+if(data.territorio_id){
+
+const { data: terr } = await client
 .from('territorios')
 .select('*')
 .eq('id', data.territorio_id)
 .single()
+
+territorio = terr
+
+}
 
 document.getElementById("resultado").innerHTML += `
 
@@ -119,17 +128,19 @@ document.getElementById("resultado").innerHTML += `
 
 <h2>${dia}</h2>
 
-<p><b>Território:</b> ${territorio.numero}</p>
+<p><b>Território:</b> ${territorio ? territorio.numero : "Sem território disponível"}</p>
 
 <p><b>Responsável:</b> ${data.responsavel || "Ninguém"}</p>
 
 <p><b>Status:</b> ${data.status}</p>
 
+${territorio ? `
 <a href="${territorio.link_mapa}" target="_blank">
 <button class="botao-mapa">Ver mapa</button>
 </a>
+` : ""}
 
-${data.status === "disponivel" ? `
+${data.status === "disponivel" && territorio ? `
 
 <input id="nome-${dia}" placeholder="Digite seu nome">
 
@@ -137,13 +148,13 @@ ${data.status === "disponivel" ? `
 Pegar território
 </button>
 
-` : `
+` : data.status === "em andamento" ? `
 
 <button onclick="concluirTerritorio('${dia}', ${data.territorio_id}, '${data.responsavel}')">
 Concluir território
 </button>
 
-`}
+` : ""}
 
 </div>
 
@@ -189,7 +200,6 @@ carregarSemana()
 
 async function concluirTerritorio(dia, territorioId, responsavel){
 
-// salvar histórico
 await client
 .from('historico')
 .insert({
@@ -199,25 +209,23 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
-// territórios em uso
 const { data: emUso } = await client
 .from('territorio_em_uso')
 .select('territorio_id')
 
-const usadosSemana = emUso.map(t => t.territorio_id)
+const usadosSemana = emUso
+.filter(t => t.territorio_id !== territorioId)
+.map(t => t.territorio_id)
 
-// todos territórios ordenados
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 .order('numero', { ascending: true })
 
-// descobrir posição atual
 let indexAtual = territorios.findIndex(t => t.id === territorioId)
 
 let proximo = null
 
-// procurar depois do atual
 for(let i = indexAtual + 1; i < territorios.length; i++){
 
 if(!usadosSemana.includes(territorios[i].id)){
@@ -227,24 +235,23 @@ break
 
 }
 
-// se não encontrou depois, procura do começo
 if(!proximo){
 
-for(let i = 0; i < territorios.length; i++){
+alert("Sem território disponível. Contatar Servo de Território.")
 
-if(!usadosSemana.includes(territorios[i].id)){
-proximo = territorios[i]
-break
-}
+await client
+.from('territorio_em_uso')
+.update({
+territorio_id: null,
+responsavel: null,
+status: "disponivel"
+})
+.eq('dia_semana', dia)
 
-}
+carregarSemana()
 
-}
-
-// se ainda não encontrou (todos ocupados)
-if(!proximo){
-alert("Todos os territórios já estão em uso.")
 return
+
 }
 
 await client
