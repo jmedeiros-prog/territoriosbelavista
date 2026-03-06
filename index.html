@@ -1,97 +1,3 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>Territórios</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<style>
-
-body{
-font-family: Arial;
-background:#f2f2f2;
-margin:0;
-text-align:center;
-}
-
-h1{
-background:#2c7be5;
-color:white;
-padding:15px;
-margin:0;
-}
-
-.container{
-padding:15px;
-}
-
-button{
-width:100%;
-padding:15px;
-margin-top:10px;
-font-size:18px;
-border:none;
-border-radius:8px;
-background:#2c7be5;
-color:white;
-}
-
-button:hover{
-background:#1a5dc9;
-}
-
-input{
-width:100%;
-padding:15px;
-margin-top:10px;
-font-size:16px;
-border-radius:8px;
-border:1px solid #ccc;
-}
-
-.card{
-background:white;
-padding:20px;
-margin-top:20px;
-border-radius:10px;
-box-shadow:0 2px 8px rgba(0,0,0,0.1);
-}
-
-.dias button{
-background:#444;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<h1>Territórios</h1>
-
-<div class="container">
-
-<div class="dias">
-
-<button onclick="verDia('segunda-feira')">Segunda</button>
-<button onclick="verDia('terça-feira')">Terça</button>
-<button onclick="verDia('quarta-feira')">Quarta</button>
-<button onclick="verDia('quinta-feira')">Quinta</button>
-<button onclick="verDia('sexta-feira')">Sexta</button>
-<button onclick="verDia('sábado')">Sábado</button>
-<button onclick="verDia('domingo')">Domingo</button>
-
-</div>
-
-<div id="resultado"></div>
-
-</div>
-
 <script>
 
 const supabaseUrl = 'https://mtokqolvifjuzxcxuxph.supabase.co'
@@ -187,12 +93,14 @@ async function concluirTerritorio(){
 
 const atual = territorioAtual.territorio_id
 
+// pega dados do território atual
 const { data: territorio } = await client
 .from('territorios')
 .select('*')
 .eq('id', atual)
 .single()
 
+// salva histórico
 await client
 .from('historico')
 .insert({
@@ -202,6 +110,7 @@ dia_semana: diaAtual,
 data_conclusao: new Date()
 })
 
+// territórios já usados nesse dia
 const { data: historico } = await client
 .from('historico')
 .select('territorio')
@@ -209,26 +118,34 @@ const { data: historico } = await client
 
 const usadosNoDia = historico.map(h => h.territorio)
 
+// pega todos os territórios
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 
+// territórios já usados na semana
 const { data: emUso } = await client
 .from('territorio_em_uso')
 .select('territorio_id')
-.eq('status','em andamento')
 
-const usadosAgora = emUso.map(t => t.territorio_id)
+const usadosSemana = emUso
+.map(t => t.territorio_id)
+.filter(id => id !== atual)
 
+// candidatos válidos
 let candidatos = territorios.filter(t =>
 !usadosNoDia.includes(t.numero) &&
-!usadosAgora.includes(t.id)
+!usadosSemana.includes(t.id)
 )
 
+// se todos já foram usados no dia, reinicia ciclo do dia
 if(candidatos.length === 0){
-candidatos = territorios.filter(t => !usadosAgora.includes(t.id))
+candidatos = territorios.filter(t =>
+!usadosSemana.includes(t.id)
+)
 }
 
+// escolher território menos usado
 let menorUso = Infinity
 let escolhido = null
 
@@ -246,6 +163,7 @@ escolhido = t
 
 }
 
+// atualiza território do dia
 await client
 .from('territorio_em_uso')
 .update({
@@ -262,6 +180,7 @@ verDia(diaAtual)
 
 }
 
+// abrir automaticamente no dia atual
 const dias = [
 "domingo",
 "segunda-feira",
@@ -277,6 +196,3 @@ const hoje = new Date().getDay()
 verDia(dias[hoje])
 
 </script>
-
-</body>
-</html>
