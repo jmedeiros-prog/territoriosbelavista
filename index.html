@@ -6,7 +6,70 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+<style>
+
+body{
+font-family: Arial, sans-serif;
+background:#f3f4f6;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
+
+.card{
+background:white;
+padding:30px;
+border-radius:12px;
+box-shadow:0 10px 25px rgba(0,0,0,0.1);
+width:320px;
+text-align:left;
+}
+
+h2{
+margin-top:0;
+text-transform:capitalize;
+}
+
+p{
+margin:6px 0;
+}
+
+button{
+background:#2563eb;
+color:white;
+border:none;
+padding:10px 15px;
+border-radius:6px;
+cursor:pointer;
+margin-top:10px;
+}
+
+button:hover{
+background:#1d4ed8;
+}
+
+input{
+width:100%;
+padding:10px;
+border-radius:6px;
+border:1px solid #ccc;
+margin-top:10px;
+}
+
+.botao-mapa{
+background:#10b981;
+}
+
+.botao-mapa:hover{
+background:#059669;
+}
+
+</style>
+
 </head>
+
 <body>
 
 <div id="resultado"></div>
@@ -46,7 +109,7 @@ const { data: territorio } = await client
 
 document.getElementById("resultado").innerHTML = `
 
-<div style="border:1px solid #ccc;padding:20px;border-radius:10px;width:300px">
+<div class="card">
 
 <h2>${dia}</h2>
 
@@ -57,20 +120,17 @@ document.getElementById("resultado").innerHTML = `
 <p><b>Status:</b> ${data.status}</p>
 
 <a href="${territorio.link_mapa}" target="_blank">
-<button>Ver mapa</button>
+<button class="botao-mapa">Ver mapa</button>
 </a>
 
 ${data.status === "disponivel" ? `
 
-<br><br>
 <input id="nome" placeholder="Digite seu nome">
 
-<br><br>
 <button onclick="pegarTerritorio()">Pegar território</button>
 
 ` : `
 
-<br><br>
 <button onclick="concluirTerritorio()">Concluir território</button>
 
 `}
@@ -130,7 +190,6 @@ dia_semana: diaAtual,
 data_conclusao: new Date()
 })
 
-
 // pegar todos territórios ordenados
 const { data: territorios } = await client
 .from('territorios')
@@ -148,7 +207,7 @@ if(!proximo){
 proximo = territorios[0]
 }
 
-// atualizar território do dia
+// atualizar território
 await client
 .from('territorio_em_uso')
 .update({
@@ -164,6 +223,7 @@ verDia(diaAtual)
 
 }
 
+// detectar dia atual
 const dias = [
 "domingo",
 "segunda-feira",
