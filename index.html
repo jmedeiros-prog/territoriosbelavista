@@ -18,8 +18,8 @@ const { data, error } = await client
 .eq('dia_semana', dia)
 .single()
 
-if(error){
-document.getElementById("resultado").innerHTML = "Erro: " + error.message
+if(error || !data){
+document.getElementById("resultado").innerHTML = "Erro ao carregar território"
 return
 }
 
@@ -30,6 +30,11 @@ const { data: territorio } = await client
 .select('*')
 .eq('id', data.territorio_id)
 .single()
+
+if(!territorio){
+document.getElementById("resultado").innerHTML = "Território não encontrado"
+return
+}
 
 document.getElementById("resultado").innerHTML = `
 
@@ -74,20 +79,18 @@ alert("Digite seu nome")
 return
 }
 
-// verifica novamente no banco
 const { data: atual } = await client
 .from('territorio_em_uso')
 .select('*')
 .eq('dia_semana', diaAtual)
 .single()
 
-if(atual.status !== "disponivel"){
+if(!atual || atual.status !== "disponivel"){
 alert("Este território acabou de ser reservado por outro irmão.")
 verDia(diaAtual)
 return
 }
 
-// reserva território
 await client
 .from('territorio_em_uso')
 .update({
@@ -107,14 +110,12 @@ async function concluirTerritorio(){
 
 const atual = territorioAtual.territorio_id
 
-// pega território atual
 const { data: territorio } = await client
 .from('territorios')
 .select('*')
 .eq('id', atual)
 .single()
 
-// salva histórico
 await client
 .from('historico')
 .insert({
@@ -124,20 +125,17 @@ dia_semana: diaAtual,
 data_conclusao: new Date()
 })
 
-// territórios já usados nesse dia
 const { data: historico } = await client
 .from('historico')
 .select('territorio')
 .eq('dia_semana', diaAtual)
 
-const usadosNoDia = historico.map(h => h.territorio)
+const usadosNoDia = historico ? historico.map(h => h.territorio) : []
 
-// pegar todos territórios
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 
-// territórios já usados na semana
 const { data: emUso } = await client
 .from('territorio_em_uso')
 .select('territorio_id')
@@ -146,20 +144,17 @@ const usadosSemana = emUso
 .map(t => t.territorio_id)
 .filter(id => id !== atual)
 
-// candidatos válidos
 let candidatos = territorios.filter(t =>
 !usadosNoDia.includes(t.numero) &&
 !usadosSemana.includes(t.id)
 )
 
-// se todos já usados no dia, reinicia ciclo
 if(candidatos.length === 0){
 candidatos = territorios.filter(t =>
 !usadosSemana.includes(t.id)
 )
 }
 
-// escolher menos usado
 let menorUso = Infinity
 let escolhido = null
 
@@ -177,7 +172,11 @@ escolhido = t
 
 }
 
-// atualiza dia com novo território
+if(!escolhido){
+alert("Nenhum território disponível")
+return
+}
+
 await client
 .from('territorio_em_uso')
 .update({
@@ -194,7 +193,6 @@ verDia(diaAtual)
 
 }
 
-// abrir automaticamente no dia atual
 const dias = [
 "domingo",
 "segunda-feira",
