@@ -139,7 +139,7 @@ const { data: territorios } = await client
 
 // candidatos válidos
 let candidatos = territorios.filter(t =>
-!usadosNesseDia.includes(parseInt(t.numero)) &&
+!usadosNesseDia.includes(t.id) &&
 !usadosSemana.includes(t.id)
 )
 
