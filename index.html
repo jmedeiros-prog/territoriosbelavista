@@ -133,7 +133,9 @@ ${data.status === "disponivel" ? `
 
 <input id="nome-${dia}" placeholder="Digite seu nome">
 
-<button onclick="pegarTerritorio('${dia}')">Pegar território</button>
+<button onclick="pegarTerritorio('${dia}')">
+Pegar território
+</button>
 
 ` : `
 
@@ -197,34 +199,52 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
-// territórios já usados na semana
+// territórios em uso
 const { data: emUso } = await client
 .from('territorio_em_uso')
 .select('territorio_id')
 
 const usadosSemana = emUso.map(t => t.territorio_id)
 
-// todos territórios
+// todos territórios ordenados
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 .order('numero', { ascending: true })
 
-// encontrar próximo disponível
+// descobrir posição atual
+let indexAtual = territorios.findIndex(t => t.id === territorioId)
+
 let proximo = null
 
-for(let t of territorios){
+// procurar depois do atual
+for(let i = indexAtual + 1; i < territorios.length; i++){
 
-if(!usadosSemana.includes(t.id)){
-proximo = t
+if(!usadosSemana.includes(territorios[i].id)){
+proximo = territorios[i]
 break
 }
 
 }
 
-// se todos estiverem usados reinicia ciclo
+// se não encontrou depois, procura do começo
 if(!proximo){
-proximo = territorios[0]
+
+for(let i = 0; i < territorios.length; i++){
+
+if(!usadosSemana.includes(territorios[i].id)){
+proximo = territorios[i]
+break
+}
+
+}
+
+}
+
+// se ainda não encontrou (todos ocupados)
+if(!proximo){
+alert("Todos os territórios já estão em uso.")
+return
 }
 
 await client
