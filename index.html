@@ -90,7 +90,6 @@ alert("Digite seu nome")
 return
 }
 
-// verifica novamente no banco
 const { data: atual } = await client
 .from('territorio_em_uso')
 .select('*')
@@ -103,7 +102,6 @@ verDia(diaAtual)
 return
 }
 
-// reserva território
 await client
 .from('territorio_em_uso')
 .update({
@@ -123,7 +121,6 @@ async function concluirTerritorio(){
 
 const atual = territorioAtual.territorio_id
 
-// salvar histórico
 await client
 .from('historico')
 .insert({
@@ -133,42 +130,23 @@ dia_semana: diaAtual,
 data_conclusao: new Date()
 })
 
-// territórios já usados nesse dia da semana
-const { data: usadosDia } = await client
-.from('historico')
-.select('territorio')
-.eq('dia_semana', diaAtual)
 
-const usadosNesseDia = (usadosDia || []).map(t => parseInt(t.territorio))
-
-// territórios em uso na semana
-const { data: emUso } = await client
-.from('territorio_em_uso')
-.select('territorio_id')
-
-const usadosSemana = (emUso || []).map(t => t.territorio_id)
-
-// todos territórios
+// pegar todos territórios ordenados
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
+.order('numero', { ascending: true })
 
-// candidatos válidos
-let candidatos = territorios.filter(t =>
-!usadosNesseDia.includes(t.id) &&
-!usadosSemana.includes(t.id)
-)
+// descobrir posição do atual
+let indexAtual = territorios.findIndex(t => t.id === atual)
 
-// se não houver candidato
-if(candidatos.length === 0){
+// escolher próximo
+let proximo = territorios[indexAtual + 1]
 
-alert("Sem território disponível. Contatar Servo de Território.")
-return
-
+// se chegou no final volta para o primeiro
+if(!proximo){
+proximo = territorios[0]
 }
-
-// escolher primeiro disponível
-const proximo = candidatos[0]
 
 // atualizar território do dia
 await client
@@ -186,7 +164,6 @@ verDia(diaAtual)
 
 }
 
-// abrir automaticamente no dia atual
 const dias = [
 "domingo",
 "segunda-feira",
