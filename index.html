@@ -187,14 +187,12 @@ async function concluirTerritorio(){
 
 const atual = territorioAtual.territorio_id
 
-// buscar território atual
 const { data: territorio } = await client
 .from('territorios')
 .select('*')
 .eq('id', atual)
 .single()
 
-// salvar histórico
 await client
 .from('historico')
 .insert({
@@ -204,37 +202,44 @@ dia_semana: diaAtual,
 data_conclusao: new Date()
 })
 
-// buscar próximo território
-const { data: proximo } = await client
+const { data: historico } = await client
+.from('historico')
+.select('territorio')
+.eq('dia_semana', diaAtual)
+
+const usados = historico.map(h => h.territorio)
+
+const { data: territorios } = await client
 .from('territorios')
 .select('*')
-.gt('id', atual)
-.order('id')
-.limit(1)
-.single()
 
-let proximoId = null
+let candidatos = territorios.filter(t => !usados.includes(t.numero))
 
-if(proximo){
-proximoId = proximo.id
-}else{
+if(candidatos.length === 0){
+candidatos = territorios
+}
 
-const { data: primeiro } = await client
-.from('territorios')
-.select('*')
-.order('id')
-.limit(1)
-.single()
+let menorUso = Infinity
+let escolhido = null
 
-proximoId = primeiro.id
+for(let t of candidatos){
+
+const { count } = await client
+.from('historico')
+.select('*',{count:'exact',head:true})
+.eq('territorio', t.numero)
+
+if(count < menorUso){
+menorUso = count
+escolhido = t
+}
 
 }
 
-// atualizar território do dia
 await client
 .from('territorio_em_uso')
 .update({
-territorio_id: proximoId,
+territorio_id: escolhido.id,
 responsavel: null,
 status: "disponivel",
 data_conclusao: new Date()
@@ -247,7 +252,6 @@ verDia(diaAtual)
 
 }
 
-// abrir automaticamente no dia atual
 const dias = [
 "domingo",
 "segunda-feira",
