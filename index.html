@@ -32,7 +32,6 @@ width:260px;
 
 h2{
 margin-top:0;
-text-transform:capitalize;
 }
 
 p{
@@ -83,9 +82,6 @@ const supabaseUrl = 'https://mtokqolvifjuzxcxuxph.supabase.co'
 const supabaseKey = 'sb_publishable_rppr0kLef4HDaYC8gHDrbg_LXggzCFL'
 
 const client = supabase.createClient(supabaseUrl, supabaseKey)
-
-let diaAtual = null
-let territorioAtual = null
 
 const dias = [
 "domingo",
@@ -171,7 +167,7 @@ const { data: atual } = await client
 .single()
 
 if(!atual || atual.status !== "disponivel"){
-alert("Este território acabou de ser reservado por outro irmão.")
+alert("Este território acabou de ser reservado.")
 carregarSemana()
 return
 }
@@ -185,14 +181,13 @@ data_de_retirada: new Date()
 })
 .eq('dia_semana', dia)
 
-alert("Território reservado!")
-
 carregarSemana()
 
 }
 
 async function concluirTerritorio(dia, territorioId, responsavel){
 
+// salvar histórico
 await client
 .from('historico')
 .insert({
@@ -202,15 +197,32 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
+// territórios já usados na semana
+const { data: emUso } = await client
+.from('territorio_em_uso')
+.select('territorio_id')
+
+const usadosSemana = emUso.map(t => t.territorio_id)
+
+// todos territórios
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 .order('numero', { ascending: true })
 
-let indexAtual = territorios.findIndex(t => t.id === territorioId)
+// encontrar próximo disponível
+let proximo = null
 
-let proximo = territorios[indexAtual + 1]
+for(let t of territorios){
 
+if(!usadosSemana.includes(t.id)){
+proximo = t
+break
+}
+
+}
+
+// se todos estiverem usados reinicia ciclo
 if(!proximo){
 proximo = territorios[0]
 }
@@ -223,8 +235,6 @@ responsavel: null,
 status: "disponivel"
 })
 .eq('dia_semana', dia)
-
-alert("Território concluído!")
 
 carregarSemana()
 
