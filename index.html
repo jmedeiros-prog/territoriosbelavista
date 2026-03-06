@@ -227,7 +227,9 @@ const { data: territorios } = await client
 .order('id')
 
 // procurar próximo território livre
-let proximo = territorios.find(t => !usados.includes(t.id))
+let proximo = territorios.find(t => 
+!usados.includes(t.id) && t.id !== atual
+)
 
 // se todos estiverem usados, volta para o primeiro
 if(!proximo){
@@ -268,5 +270,6 @@ verDia(dias[hoje])
 
 </body>
 </html>
+
 
 
