@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Territórios</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+body{
+font-family: Arial;
+background:#f2f2f2;
+margin:0;
+text-align:center;
+}
+
+h1{
+background:#2c7be5;
+color:white;
+padding:15px;
+margin:0;
+}
+
+.container{
+padding:15px;
+}
+
+button{
+width:100%;
+padding:15px;
+margin-top:10px;
+font-size:18px;
+border:none;
+border-radius:8px;
+background:#2c7be5;
+color:white;
+}
+
+button:hover{
+background:#1a5dc9;
+}
+
+input{
+width:100%;
+padding:15px;
+margin-top:10px;
+font-size:16px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+.card{
+background:white;
+padding:20px;
+margin-top:20px;
+border-radius:10px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dias button{
+background:#444;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Territórios</h1>
+
+<div class="container">
+
+<div class="dias">
+
+<button onclick="verDia('segunda-feira')">Segunda</button>
+<button onclick="verDia('terça-feira')">Terça</button>
+<button onclick="verDia('quarta-feira')">Quarta</button>
+<button onclick="verDia('quinta-feira')">Quinta</button>
+<button onclick="verDia('sexta-feira')">Sexta</button>
+<button onclick="verDia('sábado')">Sábado</button>
+<button onclick="verDia('domingo')">Domingo</button>
+
+</div>
+
+<div id="resultado"></div>
+
+</div>
+
+<script>
+
+const supabaseUrl = 'https://mtokqolvifjuzxcxuxph.supabase.co'
+const supabaseKey = 'sb_publishable_rppr0kLef4HDaYC8gHDrbg_LXggzCFL'
+
+const client = supabase.createClient(supabaseUrl, supabaseKey)
+
+let territorioAtual = null
+let diaAtual = null
+
+async function verDia(dia){
+
+diaAtual = dia
+
+const { data, error } = await client
+.from('territorio_em_uso')
+.select('*')
+.eq('dia_semana', dia)
+.single()
+
+if(error){
+document.getElementById("resultado").innerHTML = "Erro: " + error.message
+return
+}
+
+territorioAtual = data
+
+const { data: territorio } = await client
+.from('territorios')
+.select('*')
+.eq('id', data.territorio_id)
+.single()
+
+document.getElementById("resultado").innerHTML = `
+
+<div class="card">
+
+<h2>${dia}</h2>
+
+<p><b>Território:</b> ${territorio.numero}</p>
+
+<p><b>Responsável:</b> ${data.responsavel || "Ninguém"}</p>
+
+<p><b>Status:</b> ${data.status}</p>
+
+<a href="${territorio.link_mapa}" target="_blank">
+<button>Ver mapa</button>
+</a>
+
+<input id="nome" placeholder="Digite seu nome">
+
+<button onclick="pegarTerritorio()">Pegar território</button>
+
+<button onclick="concluirTerritorio()">Concluir território</button>
+
+</div>
+
+`
+
+}
+
+async function pegarTerritorio(){
+
+const nome = document.getElementById("nome").value
+
+if(!nome){
+alert("Digite seu nome")
+return
+}
+
+await client
+.from('territorio_em_uso')
+.update({
+responsavel: nome,
+status: "em andamento",
+data_de_retirada: new Date()
+})
+.eq('dia_semana', diaAtual)
+
+alert("Território reservado!")
+
+verDia(diaAtual)
+
+}
+
+async function concluirTerritorio(){
+
+const atual = territorioAtual.territorio_id
+
+// buscar dados do território
+const { data: territorio } = await client
+.from('territorios')
+.select('*')
+.eq('id', atual)
+.single()
+
+// salvar histórico
+await client
+.from('historico')
+.insert({
+territorio: territorio.numero,
+responsavel: territorioAtual.responsavel,
+dia_semana: diaAtual,
+data_conclusao: new Date()
+})
+
+// buscar próximo território
+const { data: proximo } = await client
+.from('territorios')
+.select('*')
+.gt('id', atual)
+.order('id')
+.limit(1)
+.single()
+
+let proximoId = null
+
+if(proximo){
+proximoId = proximo.id
+}else{
+
+const { data: primeiro } = await client
+.from('territorios')
+.select('*')
+.order('id')
+.limit(1)
+.single()
+
+proximoId = primeiro.id
+
+}
+
+// atualizar dia
+await client
+.from('territorio_em_uso')
+.update({
+territorio_id: proximoId,
+responsavel: null,
+status: "disponivel",
+data_conclusao: new Date()
+})
+.eq('dia_semana', diaAtual)
+
+alert("Território concluído e registrado no histórico!")
+
+verDia(diaAtual)
+
+}
+
+</script>
+
+</body>
+</html>
