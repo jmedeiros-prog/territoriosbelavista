@@ -199,15 +199,35 @@ dia_semana: dia,
 data_conclusao: new Date()
 })
 
-/* pegar próximo território da rotação */
+/* territórios já em uso */
+
+const { data: emUso } = await client
+.from('territorio_em_uso')
+.select('territorio_id')
+
+const usadosSemana = emUso.map(t => t.territorio_id)
+
+/* pegar contador */
 
 const { data: controle } = await client
 .from('controle_rotacao')
-.select('*')
+.select('proximo_territorio')
 .eq('id',1)
 .single()
 
 let proximo = controle.proximo_territorio
+
+/* pular territórios já usados */
+
+while(usadosSemana.includes(proximo)){
+
+proximo++
+
+if(proximo > TOTAL_TERRITORIOS){
+proximo = 1
+}
+
+}
 
 /* atualizar contador */
 
