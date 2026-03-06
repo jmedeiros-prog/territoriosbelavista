@@ -168,11 +168,27 @@ alert("Digite seu nome")
 return
 }
 
+// verifica novamente no banco
+const { data: atual } = await client
+.from('territorio_em_uso')
+.select('*')
+.eq('dia_semana', diaAtual)
+.single()
+
+// se alguém já pegou
+if(atual.status !== "disponivel"){
+alert("Este território acabou de ser reservado por outro irmão.")
+verDia(diaAtual)
+return
+}
+
+// reserva território
 await client
 .from('territorio_em_uso')
 .update({
 responsavel: nome,
-status: "em andamento"
+status: "em andamento",
+data_de_retirada: new Date()
 })
 .eq('dia_semana', diaAtual)
 
@@ -216,3 +232,4 @@ verDia(dias[hoje])
 
 </body>
 </html>
+
