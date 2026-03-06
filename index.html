@@ -207,16 +207,26 @@ const { data: historico } = await client
 .select('territorio')
 .eq('dia_semana', diaAtual)
 
-const usados = historico.map(h => h.territorio)
+const usadosNoDia = historico.map(h => h.territorio)
 
 const { data: territorios } = await client
 .from('territorios')
 .select('*')
 
-let candidatos = territorios.filter(t => !usados.includes(t.numero))
+const { data: emUso } = await client
+.from('territorio_em_uso')
+.select('territorio_id')
+.eq('status','em andamento')
+
+const usadosAgora = emUso.map(t => t.territorio_id)
+
+let candidatos = territorios.filter(t =>
+!usadosNoDia.includes(t.numero) &&
+!usadosAgora.includes(t.id)
+)
 
 if(candidatos.length === 0){
-candidatos = territorios
+candidatos = territorios.filter(t => !usadosAgora.includes(t.id))
 }
 
 let menorUso = Infinity
