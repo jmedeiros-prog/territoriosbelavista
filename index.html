@@ -1,280 +1,931 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Territórios</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+<title>Rodízio de Territórios</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-
-body{
-font-family: Arial, sans-serif;
-background:#f3f4f6;
-margin:0;
-padding:30px;
+/* Layout: faixa azul no topo, abas, e uma coluna de cartões por dia (2 colunas em telas largas). */
+:root{
+  --bg:#eef2f7; --surface:#ffffff; --ink:#1c2738; --muted:#5d6b80; --line:#d5dde8;
+  --accent:#3f67a3; --accent-ink:#ffffff; --accent-soft:#e3ebf7;
+  --ok:#2e7d5b; --ok-soft:#dff1e8; --warn:#9a6412; --warn-soft:#fbf0d9; --danger:#b3403a;
+  --display:"Bricolage Grotesque","Trebuchet MS",Arial,sans-serif;
+  --body:"Figtree","Segoe UI",Arial,sans-serif;
+  --radius:16px;
 }
-
-.container{
-display:flex;
-flex-wrap:wrap;
-gap:20px;
-justify-content:center;
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121821; --surface:#1b2431; --ink:#e8edf4; --muted:#9aa8bb; --line:#2c3848;
+    --accent:#7ea6e0; --accent-ink:#0f1722; --accent-soft:#22324a;
+    --ok:#6cc79e; --ok-soft:#1c3a2e; --warn:#e0b060; --warn-soft:#3a2f18; --danger:#ef8a84;
+    color-scheme:dark;
+  }
 }
-
-.card{
-background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:0 10px 25px rgba(0,0,0,0.1);
-width:260px;
+:root[data-theme="dark"]{
+  --bg:#121821; --surface:#1b2431; --ink:#e8edf4; --muted:#9aa8bb; --line:#2c3848;
+  --accent:#7ea6e0; --accent-ink:#0f1722; --accent-soft:#22324a;
+  --ok:#6cc79e; --ok-soft:#1c3a2e; --warn:#e0b060; --warn-soft:#3a2f18; --danger:#ef8a84;
+  color-scheme:dark;
 }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.4}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-h2{
-margin-top:0;
-text-transform:capitalize;
-}
+.topo{background:var(--accent);color:var(--accent-ink);padding:18px 16px 14px}
+.topo-in{max-width:880px;margin:auto;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.topo h1{font-family:var(--display);font-size:24px;margin:0;line-height:1.1;text-wrap:balance}
+.topo p{margin:4px 0 0;font-size:14px;opacity:.85}
+.btn-adm{background:transparent;border:1.5px solid currentColor;color:inherit;border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px;cursor:pointer}
 
-p{
-margin:6px 0;
-}
+nav{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.abas{max-width:880px;margin:auto;display:flex;gap:4px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.abas::-webkit-scrollbar{display:none}
+.abas a{flex:1 0 auto;text-align:center;padding:13px 9px;text-decoration:none;color:var(--muted);font-weight:600;font-size:15px;border-bottom:3px solid transparent}
+.abas a[aria-current="page"]{color:var(--accent);border-bottom-color:var(--accent)}
 
-button{
-background:#2563eb;
-color:white;
-border:none;
-padding:10px 15px;
-border-radius:6px;
-cursor:pointer;
-margin-top:10px;
-}
+main{max-width:880px;margin:auto;padding:18px 16px 40px}
+.aviso{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 14px;font-size:14px;margin-bottom:16px}
+h2{font-family:var(--display);font-size:19px;margin:22px 0 10px}
+h2:first-child{margin-top:0}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 
-button:hover{
-background:#1d4ed8;
-}
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px}
+.card.hoje{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.card-topo{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dia{font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--muted)}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px;background:var(--accent);color:var(--accent-ink)}
+.pill.esp{background:var(--warn-soft);color:var(--warn)}
+.pill.suave{background:var(--accent-soft);color:var(--accent)}
+.nota{font-size:13px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:10px;padding:7px 10px}
+.sub{margin:-6px 0 10px;font-size:14px;color:var(--muted)}
+.reg th,.reg td{text-align:left;min-width:98px;padding:8px 8px;vertical-align:top}
+.reg td:first-child,.reg th:first-child{min-width:104px}
+.reg td b{display:block;font-size:13px}
+tr.grupo td{background:var(--accent-soft);color:var(--accent);text-align:left;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px}
+.saida{font-size:14px;color:var(--muted)}
+.saida b{color:var(--ink);font-weight:600}
+.terr{font-family:var(--display);font-size:21px;font-weight:700;color:var(--accent);line-height:1.15;overflow-wrap:anywhere}
+.terr.vazio{color:var(--muted);font-size:17px}
+.status.livre{color:var(--warn);background:var(--warn-soft)}
+.status.alerta{color:#fff;background:var(--danger)}
+.alerta-mes{font-size:13.5px;font-weight:600;color:var(--danger);border:1.5px solid var(--danger);border-radius:10px;padding:8px 11px;line-height:1.4}
+.btn.atencao{border-color:var(--danger);color:var(--danger)}
+.status{align-self:flex-start;font-size:13px;font-weight:700;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:4px 12px}
+.meta{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.meta:empty{display:none}
+.topo p.hoje{font-weight:700;opacity:1;font-size:15px;margin-top:8px}
+.lema{max-width:880px;margin:10px auto 0;overflow:hidden;white-space:nowrap;font-style:italic;font-size:14.5px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent)}
+.lema span{display:inline-block;padding-left:100%;animation:passar var(--dur,24s) linear infinite}
+@keyframes passar{to{transform:translateX(-100%)}}
+@media (prefers-reduced-motion:reduce){.lema{white-space:normal;-webkit-mask-image:none;mask-image:none}.lema span{animation:none;padding-left:0}}
+.pontos{display:inline-flex;gap:3px}
+.pontos i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--line);display:block}
+.pontos i.f{background:var(--ok);border-color:var(--ok)}
+.pontos i.a{border-color:var(--accent);background:var(--accent-soft)}
+.acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.btn{flex:1;min-width:110px;text-align:center;border-radius:12px;padding:11px 12px;font-weight:700;font-size:15px;cursor:pointer;text-decoration:none;border:1.5px solid var(--accent);background:var(--surface);color:var(--accent)}
+.btn.cheio{background:var(--accent);color:var(--accent-ink)}
+.btn.leve{border-color:var(--line);color:var(--muted);font-weight:600}
+.btn.perigo{border-color:var(--danger);color:var(--danger)}
+.btn.mini{flex:none;min-width:0;padding:6px 12px;font-size:13px;border-radius:10px}
 
-.botao-mapa{
-background:#10b981;
-}
+.resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.resumo div{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px}
+.resumo strong{display:block;font-family:var(--display);font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.resumo span{font-size:13px;color:var(--muted)}
+.mes{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.mes strong{font-family:var(--display);font-size:19px;text-transform:capitalize}
+.rolagem{overflow-x:auto;background:var(--surface);border:1.5px solid var(--line);border-radius:var(--radius)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:8px 4px;text-align:center;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font-size:12px;color:var(--muted);font-weight:700}
+th:first-child,td:first-child{text-align:left;padding-left:12px;min-width:120px;font-weight:600}
+td small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.cel{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted)}
+.cel.mes-ok{background:var(--ok);color:var(--surface)}
+.cel.ciclo-ok{background:var(--ok-soft);color:var(--ok)}
+.cel.andando{border:2px solid var(--accent);color:var(--accent)}
+.legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:10px 2px 0}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda .cel{width:18px;height:18px;border-radius:5px;font-size:10px}
 
-.botao-mapa:hover{
-background:#059669;
-}
+.lista{display:flex;flex-direction:column;gap:8px}
+.camp{background:var(--accent-soft);border:1.5px solid var(--accent);border-radius:16px;padding:12px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:4px}
+.camp b{font-family:var(--display);font-size:18px;color:var(--accent)}
+.camp span{font-size:14px;font-weight:600}
+.camp small{font-size:13px;color:var(--muted)}
+.barra{height:10px;border-radius:6px;background:var(--surface);overflow:hidden;margin:4px 0}
+.barra i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.marcas{display:flex;flex-wrap:wrap;gap:6px 16px;margin-bottom:12px}
+.marcas .marca{margin:0}
+.subnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.subnav a{text-decoration:none;font-weight:700;font-size:14px;color:var(--muted);border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px}
+.subnav .sair{margin-left:auto;font:inherit;font-weight:700;font-size:14px;color:var(--danger);border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;cursor:pointer}
+.subnav a.on{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.linha{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.linha b{display:block;overflow-wrap:anywhere}
+.linha small{color:var(--muted);font-size:13px}
+.linha.inativo{opacity:.55}
+.vaziotxt{color:var(--muted);font-size:14px;padding:6px 2px}
 
-input{
-width:100%;
-padding:10px;
-border-radius:6px;
-border:1px solid #ccc;
-margin-top:10px;
-}
-
+.fundo{position:fixed;inset:0;background:rgba(10,16,26,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:0}
+.modal{background:var(--surface);width:100%;max-width:460px;border-radius:20px 20px 0 0;padding:20px 18px 24px;max-height:92%;overflow:auto}
+@media (min-width:560px){.fundo{align-items:center;padding:16px}.modal{border-radius:20px}}
+.modal h3{font-family:var(--display);font-size:20px;margin:0 0 4px}
+.modal p{margin:0 0 14px;color:var(--muted);font-size:14px}
+.campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.campo label{font-size:13px;font-weight:700;color:var(--muted)}
+.campo input,.campo select,.campo textarea{border:1.5px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;width:100%}
+.campo textarea{font:inherit;color:inherit;min-height:88px;resize:vertical}
+.obs{display:block;width:100%;text-align:left;background:var(--warn-soft);color:var(--ink);border:0;border-radius:12px;padding:9px 11px;font-size:14px;cursor:pointer;overflow-wrap:anywhere}
+.obs b{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+.obs small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.notas{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.notinha{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+.nt-topo{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--muted)}
+.nt-txt{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:4px}
+.midias{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.midia{width:92px;height:92px;border-radius:10px;overflow:hidden;background:var(--bg);font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.midia img,.midia video{width:100%;height:100%;object-fit:cover;display:block}
+.midia.grande,.midia[data-tipo="video"]{width:100%;height:auto}
+.midia.grande img,.midia[data-tipo="video"] video{height:auto;object-fit:contain}
+.midia a{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--accent);font-weight:700;font-size:13px;text-decoration:none}
+.midia[data-tipo="video"] a{padding:14px}
+.modal h4{font-family:var(--display);font-size:16px;margin:4px 0 10px}
+.marca{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:12px}
+.marca input{width:20px;height:20px;flex:none}
+.erro{color:var(--danger);font-size:14px;font-weight:600;margin:0 0 10px;min-height:0}
+.toast{position:fixed;left:16px;right:16px;bottom:18px;margin:auto;max-width:440px;background:var(--ink);color:var(--bg);padding:13px 16px;border-radius:14px;font-size:14px;font-weight:600;z-index:30;text-align:center}
+footer{text-align:center;font-size:13px;color:var(--muted);padding:0 16px 30px}
+@media (max-width:420px){.resumo strong{font-size:22px}.cel{width:25px;height:25px}}
+@media (prefers-reduced-motion:no-preference){.card,.btn{transition:border-color .15s,background .15s}}
 </style>
-
 </head>
-
 <body>
 
-<div id="resultado" class="container"></div>
+<header class="topo">
+  <div class="topo-in">
+    <div>
+      <h1>Territórios da Semana</h1>
+      <p>Congregação Bela Vista</p>
+      <p class="hoje" id="hoje"></p>
+    </div>
+  </div>
+  <div class="lema" id="lema" hidden></div>
+</header>
 
+<nav>
+  <div class="abas">
+    <a href="#semana" data-aba="semana">Semana</a>
+    <a href="#controle" data-aba="controle">Mensal</a>
+    <a href="#programacao" data-aba="programacao">Programação</a>
+    <a href="#registro" data-aba="adm">Administração</a>
+  </div>
+</nav>
+
+<main id="app"></main>
+<footer>Organização de Territórios – Congregação Bela Vista<br><span id="sinc">Carregando…</span></footer>
+<div id="camada"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
+/* ============ CONFIGURAÇÃO ============ */
+const CHAVE = 'rodizio-territorios-teste';
+// Endereço do Apps Script da planilha "Territórios Bela Vista", que guarda os dados de todos.
+const API = 'COLE_AQUI_A_URL_DE_TESTE';
+const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+const LETRA = ['S','T','Q','Q','S','S','D'];
+const TIPOS = {tarde:'Tarde', manha:'Manhã e fim de semana', afastado:'Afastado', rural:'Rural'};
+// Afastados e rurais não seguem a contagem de dias: rodam por ordem de quem está há mais tempo sem sair.
+const semCiclo = tipo => tipo==='afastado' || tipo==='rural';
+const RURAIS = ['Tigrão', 'Tanque Velho', 'Aparecidinha'];
+// Escala inicial de dirigentes de sábado (da folha "Designação Saída de Campo").
+const ESCALA_INICIAL = [['2026-11-14','Rodrigo Cardoso'],['2026-11-21','Edson Ornaghi'],['2026-11-28','Edson Reis'],['2026-12-05','Anísio Santos'],
+  ['2026-12-12','João Vitor'],['2026-12-19','João Medeiros'],['2026-12-26','Elisson Takeshi'],['2027-01-02','Adilson Silva'],['2027-01-09','Willian Guimarães'],
+  ['2027-01-16','Rodrigo Cardoso'],['2027-01-23','Edson Ornaghi'],['2027-01-30','Edson Reis'],['2027-02-06','Anísio Santos'],['2027-02-13','João Vitor']];
+const escalaInicial = () => ESCALA_INICIAL.map(x => ({data:x[0], nome:x[1]}));
+const DRIVE = id => 'https://drive.google.com/file/d/' + id + '/view';
 
-const supabaseUrl = 'https://mtokqolvifjuzxcxuxph.supabase.co'
-const supabaseKey = 'sb_publishable_rppr0kLef4HDaYC8gHDrbg_LXggzCFL'
-
-const client = supabase.createClient(supabaseUrl, supabaseKey)
-
-const TOTAL_TERRITORIOS = 9
-
-const dias = [
-"domingo",
-"segunda-feira",
-"terça-feira",
-"quarta-feira",
-"quinta-feira",
-"sexta-feira",
-"sábado"
-]
-
-async function carregarSemana(){
-
-document.getElementById("resultado").innerHTML = ""
-
-for(let dia of dias){
-
-const { data } = await client
-.from('territorio_em_uso')
-.select('*')
-.eq('dia_semana', dia)
-.single()
-
-if(!data) continue
-
-let territorio = null
-
-if(data.territorio_id){
-
-const { data: terr } = await client
-.from('territorios')
-.select('*')
-.eq('id', data.territorio_id)
-.single()
-
-territorio = terr
-
+/* ============ DADOS INICIAIS (cartões da pasta TERRITORIOS SITE) ============ */
+function dadosIniciais(){
+  const lista = [
+    ['T01','tarde','11DhA5KTzmc3ClGlakEqHHRbsySH5P_ki'],['T02','tarde','1OX-740VdHbAvy2rBnyZa1MwGCdofs5i3'],['T03','tarde','1ECAhb5Ki3YqgBKuzDCyNsJoB45W76PX0'],
+    ['T04','tarde','1FwDK1QEdW3WVXyPC4xOphheRy7ESeUbN'],['T05','tarde','1zkwViotSVmBI1H2VHfJCvJd5LYk-0gzR'],['T06','tarde','1ALKqMBsqj_L16DvEO-rcAA0T99sr9MTa'],
+    ['T07','tarde','1m4L2Hq1EgXnqXE6KURMxBwDglsqthWEV'],['T08','tarde','1aPAaTRb_ej4no43cow5EfUWzBUt-lKb5'],['T09','tarde','1qCOrbqO6DAv1rnvJo81gOirpfFzaBdvS'],
+    ['C-04','manha','1zh8I1OhzrnSxdmCBS_EtGSI8yyX4xelL'],['C-05','manha','1ocqcJb5VbBvF-LpHzG49IdkPmr7ux2mN'],['C-06','manha','1tbMomYkkg03TB7SXHnLUqTPf03Rn-F-0'],
+    ['C-07','manha','1aNzORwJcH1SgdkRXl0VA7HjeCqkweJGm'],['C-08','manha','1UbC9us2N39CkFhWZT3I0_L1zeufBDS32'],['C-09','manha','1rd1Sf_0kAYnQpBG1ozPBDjk2chBR7WQv'],
+    ['C-10','manha','1Ni_W_cXS_rSSTmVBn-N7bTMMjp-9VtGv'],
+    ['T10','afastado','1_WDS3nOHiwYdRDha0jvA2fZ40ecwNIiZ'],['T11','afastado','1A-we-wVH933ehw5WpPXtyMrJyVHuksqW'],['T12','afastado','1t36NWyxgLR8Wg8ydhzuhgPDLh4aZBqFt'],
+    ['Chácara Dora 01','afastado','16lmsu9gWvedoXzyaxXF7CovZUcTCyoe2'],['Chácara Dora 02','afastado','10bIpdAPMqMxNiKFn_y97R8MCzpIeSLB6'],
+    ['Tigrão','rural','1KmYefg3lDxUUifcKO3e4O-4Gw3ujU-mg'],['Tanque Velho','rural','1AgZGr9uPCVdTBwgcsQ2FxuKS0O69_Xkj'],
+    ['Igaveta 01','afastado','13QULlABA4dzhAVXGzlCP0KUgd5eJN_Te'],['Igaveta 02','afastado','1e7mfWKALA8nm5Ds2-9SRthTc42fpTSNp'],
+    ['Viçoso 01','afastado','1s_iniRlpl2yqqF_BQkuHjQklj05VoTkc'],['Viçoso 02','afastado','1FSONuRt16uYybxP2xV6P7VebT5s48cdA'],
+    ['Aparecidinha','rural','1rY4f3ZFBQvJVC-7_7BojBpah3JuVyAUq'],['Caxambu','afastado','1qmjZBb4TNDSNFnxr5YEIhFckqK3hWwta'],
+    ['Meireles','afastado','1575jRh6DBll8yxHAuB9vc13ELQsKZvIS'],['F-01','manha','1CE_7NjYLJX7SlBjTFTTYS4ULblybyZnF']
+  ];
+  const territorios = lista.map((x,i) => ({id:'k'+String(i+1).padStart(2,'0'), nome:x[0], tipo:x[1], link:DRIVE(x[2]), feitos:[], ciclo:1, ativo:true, notas:[]}));
+  const vagas = [
+    {id:'seg', dia:0, turno:'tarde', grupo:'', local:'Casa Irmão Eduardo', dirigente:'Willian'},
+    {id:'ter', dia:1, turno:'manha', grupo:'', local:'Salão do Reino', dirigente:'Edson Ornaghi'},
+    {id:'qua', dia:2, turno:'manha', grupo:'', local:'Salão do Reino', dirigente:'Edson Ornaghi'},
+    {id:'qui', dia:3, turno:'tarde', grupo:'', local:'Casa Irmão Eduardo', dirigente:'Edson Reis'},
+    {id:'sex', dia:4, turno:'tarde', grupo:'', local:'Salão do Reino', dirigente:'Anísio Santos'},
+    {id:'sab', dia:5, turno:'afastado', grupo:'', local:'Salão do Reino', dirigente:'Todos os grupos'},
+    {id:'dom1', dia:6, turno:'manha', grupo:'Bela Vista 1', local:'Saída do grupo', dirigente:'Edson Reis'},
+    {id:'dom2', dia:6, turno:'manha', grupo:'Bela Vista 2', local:'Saída do grupo', dirigente:'Willian Guimarães'},
+    {id:'dom3', dia:6, turno:'manha', grupo:'Caxambu', local:'Saída do grupo', dirigente:'Takeshi'},
+    {id:'dom4', dia:6, turno:'manha', grupo:'Meireles', local:'Saída do grupo', dirigente:'Edson Ornaghi'},
+    {id:'afs', dia:5, turno:'rural', grupo:'Todos os grupos', local:'Salão do Reino', dirigente:'Todos os grupos'}
+  ].map(v => Object.assign(v, {terr:null, pego:false, por:'', desde:hojeISO()}));
+  // Começa sem nenhum histórico: o registro é preenchido a partir das conclusões feitas no sistema.
+  const historico = [];
+  S = {v:6, territorios, vagas, historico, senha:SENHA_PADRAO, escala:escalaInicial()};
+  preencherVazias(); return S;
 }
 
-document.getElementById("resultado").innerHTML += `
-
-<div class="card">
-
-<h2>${dia}</h2>
-
-<p><b>Território:</b> ${territorio ? territorio.numero : "Sem território disponível"}</p>
-
-<p><b>Responsável:</b> ${data.responsavel || "Ninguém"}</p>
-
-<p><b>Status:</b> ${data.status}</p>
-
-${territorio ? `
-<a href="${territorio.link_mapa}" target="_blank">
-<button class="botao-mapa">Ver mapa</button>
-</a>
-` : ""}
-
-${data.status === "disponivel" && territorio ? `
-
-<input id="nome-${dia}" placeholder="Digite seu nome">
-
-<button onclick="pegarTerritorio('${dia}')">
-Pegar território
-</button>
-
-` : data.status === "em andamento" ? `
-
-<button onclick="concluirTerritorio('${dia}', ${data.territorio_id}, '${data.responsavel}')">
-Concluir território
-</button>
-
-` : ""}
-
-</div>
-
-`
-
+/* ============ ARMAZENAMENTO ============ */
+// Os dados ficam na planilha do Google. O aparelho guarda só uma cópia para abrir mais rápido.
+// Ajusta dados gravados por versões anteriores: um só território afastado (sábado e domingo) e a escala de sábado.
+function migrar(){
+  let mudou = false;
+  if(S.vagas.some(v => v.id==='afa' || v.id==='afb')){ S.vagas = S.vagas.filter(v => v.id!=='afa' && v.id!=='afb');
+    const a = S.vagas.find(v => v.id==='afs'); if(a) a.grupo = 'Todos os grupos'; mudou = true; }
+  if(!S.escala){ S.escala = escalaInicial(); mudou = true; }
+  // v6: afastados passam para o sábado; rurais ficam no último sábado e domingo do mês.
+  if((S.v||0) < 6){
+    S.territorios.forEach(t => { if(t.tipo==='afastado' && RURAIS.includes(t.nome)) t.tipo = 'rural'; });
+    S.vagas.forEach(v => { const novo = v.id==='sab' ? 'afastado' : v.id==='afs' ? 'rural' : v.turno;
+      if(novo !== v.turno){ v.turno = novo; if(!v.pego) v.terr = null; } });
+    S.v = 6; preencherVazias(); mudou = true;
+  }
+  return mudou;
+}
+let S = null, versao = 0, fila = Promise.resolve(), pendentes = 0;
+function sinc(txt){ const e = document.getElementById('sinc'); if(e) e.textContent = txt; }
+function hora(){ return new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}); }
+function guardarLocal(){ try{ localStorage.setItem(CHAVE, JSON.stringify({versao, S})); }catch(e){} }
+async function api(corpo){
+  const r = await fetch(API, corpo ? {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(corpo)} : {});
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+// Busca os dados da planilha. Se outra pessoa alterou alguma coisa, a tela é atualizada.
+async function buscar(){
+  if(pendentes) return true;
+  try{
+    const r = await api();
+    if(pendentes) return true;
+    if(!r.estado){ dadosIniciais(); versao = r.versao; desenhar(); salvar(); return true; }
+    if(r.versao !== versao || !S){ S = r.estado; versao = r.versao; const mudou = migrar(); guardarLocal(); desenhar(); if(mudou){ salvar(); return true; } }
+    sinc('Sincronizado às ' + hora()); return true;
+  }catch(e){ sinc(S ? 'Sem conexão: mostrando a última versão guardada neste aparelho.' : 'Sem conexão.'); return false; }
+}
+// Envia os dados para a planilha, um envio de cada vez. Se outra pessoa gravou antes, vale o que está na planilha.
+function salvar(){
+  pendentes++; sinc('Salvando…');
+  fila = fila.then(async () => {
+    let falha = false;
+    try{
+      const r = await api({acao:'salvar', base:versao, estado:S});
+      if(r.ok){ versao = r.versao; guardarLocal(); sinc('Salvo às ' + hora()); }
+      else if(r.conflito && r.estado){ S = r.estado; versao = r.versao; migrar(); guardarLocal(); fechar(); desenhar(); sinc('Atualizado às ' + hora());
+        toast('Outra pessoa alterou os dados agora há pouco. Atualizei a tela: confira e repita o que você fez.'); }
+      else falha = true;
+    }catch(e){ falha = true; }
+    pendentes--;
+    if(falha){ versao = -1; sinc('Não foi possível salvar.'); toast('Não consegui salvar na planilha. Confira a internet e repita o que você fez.'); await buscar(); }
+  });
+  return fila;
+}
+async function carregar(){
+  try{ const c = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if(c && c.S){ S = c.S; versao = c.versao; migrar(); desenhar(); } }catch(e){}
+  if(!S) app.innerHTML = '<div class="vaziotxt">Carregando os territórios…</div>';
+  const ok = await buscar();
+  if(!ok && !S) app.innerHTML = '<div class="card" style="max-width:420px;margin:30px auto;text-align:center"><div class="terr">Sem conexão</div><div class="saida">Não consegui buscar os territórios. Confira a internet.</div><div class="acoes"><button class="btn cheio" data-acao="recarregar">Tentar de novo</button></div></div>';
 }
 
+// SHA-256: a senha fica guardada só como código embaralhado, nunca em texto.
+function sha256(txt){
+  const K=[],H=[]; let n=2,c=0;
+  const frac = x => ((x - Math.floor(x)) * 4294967296) | 0;
+  while(c<64){ let p=true; for(let i=2;i*i<=n;i++) if(n%i===0){ p=false; break; }
+    if(p){ if(c<8) H[c]=frac(Math.pow(n,1/2)); K[c++]=frac(Math.pow(n,1/3)); } n++; }
+  const b=[...new TextEncoder().encode(txt)], L=b.length*8; b.push(128); while(b.length%64!==56) b.push(0);
+  for(let i=7;i>=0;i--) b.push(i>3 ? 0 : (L>>>(i*8))&255);
+  const r=(x,k)=>(x>>>k)|(x<<(32-k));
+  for(let o=0;o<b.length;o+=64){ const w=[]; for(let i=0;i<16;i++) w[i]=(b[o+i*4]<<24)|(b[o+i*4+1]<<16)|(b[o+i*4+2]<<8)|b[o+i*4+3];
+    for(let i=16;i<64;i++){ const a=w[i-15],d=w[i-2]; w[i]=(w[i-16]+(r(a,7)^r(a,18)^(a>>>3))+w[i-7]+(r(d,17)^r(d,19)^(d>>>10)))|0; }
+    let [a,bb,cc,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){ const t1=(h+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[i]+w[i])|0, t2=((r(a,2)^r(a,13)^r(a,22))+((a&bb)^(a&cc)^(bb&cc)))|0;
+      h=g; g=f; f=e; e=(d+t1)|0; d=cc; cc=bb; bb=a; a=(t1+t2)|0; }
+    [a,bb,cc,d,e,f,g,h].forEach((x,i)=>{ H[i]=(H[i]+x)|0; }); }
+  return H.map(x=>(x>>>0).toString(16).padStart(8,'0')).join('');
+}
+const SENHA_PADRAO = 'ac07871b2643465cde5b6ba2038fb74cb716cbb871c11ca605d4cbbe0afd2503';
+
+/* ============ UTILITÁRIOS ============ */
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function hojeISO(){ return iso(new Date()); }
+function diaHoje(){ return (new Date().getDay()+6)%7; }
+function br(s){ if(!s) return ''; const p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function brCurto(s){ const p=s.split('-'); return p[2]+'/'+p[1]; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function linkOk(u){ return /^https?:\/\//i.test(u||''); }
+const terr = id => S.territorios.find(t => t.id===id);
+const vaga = id => S.vagas.find(v => v.id===id);
+function nomeVaga(v){ return v.turno==='rural' ? 'Último sábado e domingo (rural)' : DIAS[v.dia] + (v.grupo ? ' – ' + v.grupo : ''); }
+
+// Último sábado (dia 5) ou domingo (dia 6) do mês; se já passou, o do mês seguinte.
+function ultimoDoMes(a, m, dia){ const alvo = dia===5 ? 6 : 0, d = new Date(a, m+1, 0); while(d.getDay()!==alvo) d.setDate(d.getDate()-1); return iso(d); }
+function dataAfastado(dia){ const h = new Date(); let s = ultimoDoMes(h.getFullYear(), h.getMonth(), dia);
+  if(s < hojeISO()){ const n = new Date(h.getFullYear(), h.getMonth()+1, 1); s = ultimoDoMes(n.getFullYear(), n.getMonth(), dia); } return s; }
+function datasAfastado(){ return [dataAfastado(5), dataAfastado(6)].sort().map(brCurto).join(' e '); }
+function ehUltimoSabado(s){ const p = s.split('-').map(Number); return ultimoDoMes(p[0], p[1]-1, 5)===s; }
+// Escala de sábado: quem dirige em cada data.
+// Data da próxima vez que aquele dia da semana cai (hoje conta). Muda sozinha conforme os dias passam.
+function proxData(dia){ const d = new Date(); d.setDate(d.getDate() + (dia - diaHoje() + 7) % 7); return iso(d); }
+function proxSabado(){ const d = new Date(); d.setDate(d.getDate() + (6 - d.getDay())); return iso(d); }
+function dirigenteEm(data){ const e = (S.escala||[]).find(x => x.data===data); return e ? e.nome : ''; }
+function dirigenteDe(v){ if(v.dia!==5) return v.dirigente; return dirigenteEm(v.turno==='rural' ? dataAfastado(5) : proxSabado()) || v.dirigente; }
+function hojeEhAfastado(dia){ return (dia===5 || dia===6) && dataAfastado(dia)===hojeISO(); }
+
+/* ============ REGRAS DO RODÍZIO ============ */
+function ocupados(){ return new Set(S.vagas.map(v => v.terr).filter(Boolean)); }
+function ultima(tid, dia){ let d=''; for(const h of S.historico){ if(h.terr===tid && (dia==null || h.dia===dia) && h.data>d) d=h.data; } return d; }
+// Dias em que um tipo de cartão roda (ex.: tarde = segunda e quinta).
+function diasDoTipo(tipo){ return [...new Set(S.vagas.filter(v => v.turno===tipo).map(v => v.dia))].sort(); }
+// Próximo cartão para uma saída: livre, do mesmo tipo da saída. Prefere quem ainda não fez
+// aquele dia no ciclo; entre eles, quem está há mais tempo sem passar por ali.
+// Um afastado concluído fica 30 dias fora das sugestões e dos livres. Só volta antes se todos os outros também estiverem descansando.
+function descansando(t){ const u = ultima(t.id); if(!u) return false; const d = new Date(); d.setDate(d.getDate() - 30); return u > iso(d); }
+function afastadosDaVez(lista){ const prontos = lista.filter(t => !descansando(t)); return prontos.length ? prontos : lista; }
+function proximoDoTipo(v, tipo, excluir){
+  const oc = ocupados(), ord = t => S.territorios.indexOf(t);
+  let base = S.territorios.filter(t => t.ativo && t.tipo===tipo && !oc.has(t.id) && t.id!==excluir);
+  if(tipo==='afastado') base = afastadosDaVez(base);
+  if(semCiclo(tipo)){ base.sort((a,b) => ultima(a.id).localeCompare(ultima(b.id)) || ord(a)-ord(b)); return base.length ? base[0].id : null; }
+  const novos = base.filter(t => !t.feitos.includes(v.dia)), c = novos.length ? novos : base;
+  c.sort((a,b) => ultima(a.id,v.dia).localeCompare(ultima(b.id,v.dia)) || ultima(a.id).localeCompare(ultima(b.id)) || ord(a)-ord(b));
+  return c.length ? c[0].id : null;
+}
+// Sábado: a preferência é um afastado; se não houver nenhum solto, entra um cartão da manhã.
+/* ---------- Campanha ----------
+   Durante uma campanha todos os grupos saem juntos (o domingo vira uma saída só), cada dia tem o seu território
+   até concluir e o que foi concluído não volta para a lista. O rodízio normal fica guardado e volta no fim. */
+const DOM_EXTRA = ['dom2', 'dom3', 'dom4'];
+function camp(){ return S && S.campanha && S.campanha.ativa ? S.campanha : null; }
+function vagasAtivas(){ return camp() ? S.vagas.filter(v => !DOM_EXTRA.includes(v.id)) : S.vagas; }
+// Territórios que ainda faltam na campanha, na ordem de preferência daquele dia (primeiro os do período dele).
+function candidatosCampanha(v){
+  const c = camp(), feitos = new Set(c.feitos), tipos = c.tipos || Object.keys(TIPOS);
+  const falta = S.territorios.filter(t => t.ativo && tipos.includes(t.tipo) && !feitos.has(t.id));
+  if(v.turno==='rural') return falta.filter(t => t.tipo==='rural');
+  const ordem = v.turno==='afastado' ? ['afastado','manha','tarde'] : v.turno==='manha' ? ['manha','afastado','tarde'] : ['tarde','manha','afastado'];
+  return [].concat(...ordem.map(tp => falta.filter(t => t.tipo===tp)));
+}
+function iniciarCampanha(nome, fim, tipos){
+  const salvo = S.vagas.map(v => ({id:v.id, terr:v.terr, pego:!!v.pego, por:v.por || '', desde:v.desde}));
+  S.vagas.forEach(v => { v.terr = null; v.pego = false; v.por = ''; });
+  S.campanha = {ativa:true, nome, inicio:hojeISO(), fim, tipos, feitos:[], total:S.territorios.filter(t => t.ativo && tipos.includes(t.tipo)).length, salvo};
+  preencherVazias();
+}
+function encerrarCampanha(){
+  const c = S.campanha; c.ativa = false; c.encerrada = hojeISO();
+  S.vagas.forEach(v => { const s = (c.salvo || []).find(x => x.id===v.id); v.terr = s ? s.terr : null; v.pego = s ? s.pego : false; v.por = s ? s.por : ''; if(s) v.desde = s.desde; });
+  const vistos = new Set();
+  S.vagas.forEach(v => { const t = v.terr && terr(v.terr); if(!t || !t.ativo || vistos.has(v.terr)){ v.terr = null; v.pego = false; v.por = ''; } else vistos.add(v.terr); });
+  delete c.salvo; preencherVazias();
+}
+function proximo(v, excluir){
+  if(camp()){ const oc = ocupados(), c = candidatosCampanha(v).find(t => !oc.has(t.id) && t.id!==excluir); return c ? c.id : null; }
+  return proximoDoTipo(v, v.turno, excluir) || (v.turno==='afastado' ? proximoDoTipo(v, 'manha', excluir) : null);
+}
+// O rodízio só SUGERE o cartão de cada saída. Ele fica "livre" até um irmão apertar "Pegar território";
+// só então entra em andamento e a designação vai para o registro, com a data desse dia.
+function preencherVazias(excluir){ for(const v of vagasAtivas()){ if(!v.terr){ v.pego = false; v.por = ''; const p = proximo(v, excluir); if(p){ v.terr = p; v.desde = hojeISO(); } } } }
+function segundaISO(){ const d = new Date(); d.setDate(d.getDate() - (d.getDay()+6)%7); return iso(d); }
+function presos(){ return new Set(S.vagas.filter(v => v.terr && v.pego).map(v => v.terr)); }
+// Outros cartões que podem ser pegos no lugar do sugerido: mesmo período (manhã ou tarde), que ninguém pegou,
+// sem conclusão nesta semana e respeitando o rodízio (primeiro os que ainda não passaram por aquele dia).
+function alternativas(v){
+  if(camp()){ if(!v.terr) return []; const pr = presos(), sug = terr(v.terr);
+    const alt = candidatosCampanha(v).filter(t => !pr.has(t.id) && t.id!==v.terr), mesmo = alt.filter(t => sug && t.tipo===sug.tipo);
+    return mesmo.length ? mesmo : alt; }
+  if(v.turno==='rural' || !v.terr) return [];
+  const pr = presos(), seg = segundaISO(), ord = t => S.territorios.indexOf(t), sug = terr(v.terr);
+  const solto = t => t.ativo && !pr.has(t.id) && t.id!==v.terr && !S.historico.some(x => x.terr===t.id && x.data>=seg);
+  const porRodizio = (a,b) => ultima(a.id,v.dia).localeCompare(ultima(b.id,v.dia)) || ultima(a.id).localeCompare(ultima(b.id)) || ord(a)-ord(b);
+  // Sábado: como opção ficam os outros afastados que não estão descansando (30 dias) e, depois, os cartões da manhã.
+  if(v.turno==='afastado'){
+    const todos = S.territorios.filter(t => t.ativo && t.tipo==='afastado' && !pr.has(t.id));
+    const alguemPronto = todos.some(t => !descansando(t));
+    const af = todos.filter(t => t.id!==v.terr && (!alguemPronto || !descansando(t))).sort((a,b) => ultima(a.id).localeCompare(ultima(b.id)) || ord(a)-ord(b));
+    return af.concat(S.territorios.filter(t => t.tipo==='manha' && solto(t)).sort(porRodizio));
+  }
+  const base = S.territorios.filter(t => t.tipo===v.turno && solto(t));
+  const novos = base.filter(t => !t.feitos.includes(v.dia));
+  const c = novos.length ? novos : (sug && !sug.feitos.includes(v.dia) ? [] : base);
+  return c.sort(porRodizio);
+}
+function concluir(vagaId, nome, data){
+  const v = vaga(vagaId), t = terr(v.terr); if(!t) return '';
+  S.historico.push({id:'h'+Date.now()+Math.random().toString(36).slice(2,7), terr:t.id, vaga:v.id, dia:v.dia, nome, para:dirigenteDe(v), pegou:v.por || '', desig:v.desde, data, ciclo:t.ciclo, camp:(camp() ? camp().nome : ''), reg:new Date().toISOString()});
+  let fechou = false;
+  if(camp()){ if(!camp().feitos.includes(t.id)) camp().feitos.push(t.id); }
+  else if(!semCiclo(t.tipo)){
+    if(!t.feitos.includes(v.dia)) t.feitos.push(v.dia);
+    const dias = diasDoTipo(t.tipo);
+    if(dias.length && dias.every(d => t.feitos.includes(d))){ t.feitos = []; t.ciclo++; fechou = true; }
+  }
+  v.terr = null; v.pego = false; v.por = '';
+  limparNotas(t);
+  const p = proximo(v, t.id);
+  if(p){ v.terr = p; v.desde = data; }
+  preencherVazias(t.id); salvar();
+  return t.nome + ' concluído.' + (fechou ? ' Passou por todos os dias dele e recomeça o ciclo.' : '') +
+    (v.terr ? ' ' + terr(v.terr).nome + ' entrou em ' + nomeVaga(v) + '.' : ' ' + nomeVaga(v) + ' ficou sem cartão livre.');
+}
+function desfazer(hid){
+  const i = S.historico.findIndex(h => h.id===hid); if(i<0) return;
+  const h = S.historico[i]; S.historico.splice(i,1);
+  if(h.camp && S.campanha) S.campanha.feitos = (S.campanha.feitos || []).filter(x => x!==h.terr);
+  const t = terr(h.terr);
+  if(t && !h.camp && !semCiclo(t.tipo)){
+    const doCiclo = c => S.historico.filter(x => x.terr===t.id && x.ciclo===c);
+    if(h.ciclo>0 && h.ciclo===t.ciclo-1 && doCiclo(t.ciclo).length===0) t.ciclo--;
+    t.feitos = [...new Set(doCiclo(t.ciclo).map(x => x.dia))];
+  }
+  const v = vaga(h.vaga);
+  if(t && v && !v.pego && !ocupados().has(t.id)){ v.terr = t.id; v.pego = true; v.por = h.pegou || ''; v.desde = h.desig || hojeISO(); }
+  salvar();
 }
 
-async function pegarTerritorio(dia){
+/* ============ TELAS ============ */
+let admin = false, aba = 'semana';
+let mesRef = (() => { const d=new Date(); return {a:d.getFullYear(), m:d.getMonth()}; })();
+const app = document.getElementById('app'), camada = document.getElementById('camada');
 
-const nome = document.getElementById(`nome-${dia}`).value
-
-if(!nome){
-alert("Digite seu nome")
-return
+function pontos(t, diaAtual){
+  const dias = diasDoTipo(t.tipo), n = dias.filter(d => t.feitos.includes(d)).length;
+  return '<span class="pontos" title="Dias já trabalhados neste ciclo">' + dias.map(d =>
+    '<i class="' + (t.feitos.includes(d)?'f':(d===diaAtual?'a':'')) + '"></i>').join('') + '</span><span>' + n + ' de ' + dias.length + ' dias</span>';
 }
 
-await client
-.from('territorio_em_uso')
-.update({
-responsavel: nome,
-status: "em andamento",
-data_de_retirada: new Date()
-})
-.eq('dia_semana', dia)
+/* ============ ANOTAÇÕES (onde parou, fotos e vídeos) ============ */
+// Fotos e vídeos vão para uma pasta do Google Drive; o texto das anotações vai junto com o cartão.
+function base64(blob){ return new Promise((ok,no) => { const l = new FileReader(); l.onload = () => ok(String(l.result).split(',')[1]); l.onerror = () => no(l.error); l.readAsDataURL(blob); }); }
+async function midiaPut(arq, blob){ const r = await api({acao:'midia', nome:arq.name || 'arquivo', tipo:blob.type || arq.type, dados:await base64(blob)}); if(!r.ok) throw new Error(r.erro || 'erro'); return r.id; }
+const midiaDel = id => api({acao:'apagarMidia', id});
+// Reduz a foto antes de enviar (lado maior de até 1400 px).
+function reduzir(file){ return new Promise(ok => { const img = new Image(), u = URL.createObjectURL(file);
+  img.onload = () => { const k = Math.min(1, 1400/Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(u); c.toBlob(b => ok(b || file), 'image/jpeg', .8); };
+  img.onerror = () => { URL.revokeObjectURL(u); ok(file); }; img.src = u; }); }
+// Fotos aparecem em miniatura; o toque abre a foto ou o vídeo no Google Drive.
+function mostrarMidias(){ for(const el of camada.querySelectorAll('.midia[data-mid]')){ const id = encodeURIComponent(el.dataset.mid), video = el.dataset.tipo==='video';
+  el.innerHTML = '<a href="https://drive.google.com/file/d/' + id + '/view" target="_blank" rel="noopener">' + (video ? '▶ Abrir vídeo' : '<img alt="Foto da anotação (toque para abrir)" src="https://drive.google.com/thumbnail?id=' + id + '&sz=w400">') + '</a>';
+  const img = el.querySelector('img'); if(img) img.onerror = () => { img.parentNode.textContent = 'Abrir foto'; }; } }
+// Ao concluir, as anotações do território são apagadas.
+function limparNotas(t){ const sai = t.notas||[]; t.notas = [];
+  sai.forEach(n => (n.midias||[]).forEach(m => midiaDel(m.id).catch(() => {}))); }
+function obsResumo(t){ const n = t.notas||[]; if(!n.length) return '';
+  const u = n[n.length-1], q = n.reduce((s,x) => s + (x.midias||[]).length, 0), txt = u.texto || '(foto ou vídeo)';
+  return '<button class="obs" data-acao="obs" data-id="' + t.id + '"><b>' + 'Onde parou' + '</b>' + esc(txt.length>110 ? txt.slice(0,110) + '…' : txt) +
+    '<small>' + esc(u.nome) + ' · ' + brCurto(u.data) + (n.length>1 ? ' · ' + n.length + ' anotações' : '') + (q ? ' · ' + q + (q>1 ? ' fotos/vídeos' : ' foto/vídeo') : '') + '</small></button>'; }
 
-carregarSemana()
-
+// Alerta: o território já foi concluído neste mesmo mês, no mesmo dia da semana desta saída.
+// Acontece quando não sobra outro cartão livre e o rodízio devolve o mesmo. Não vale para o rural (é mensal).
+function jaFeitoNoMes(v, t){ if(!v || !t || v.turno==='rural') return null;
+  const mes = proxData(v.dia).slice(0,7);
+  const r = S.historico.filter(h => h.terr===t.id && h.data && h.data.slice(0,7)===mes && diaDe(h)===v.dia);
+  return r.length ? r[r.length-1] : null; }
+function diaDe(h){ if(typeof h.dia==='number') return h.dia; const d = new Date(h.data+'T12:00:00'); return (d.getDay()+6)%7; }
+function textoAlerta(v, r){ return 'Atenção: este território já foi trabalhado neste mês numa ' + DIAS[v.dia].toLowerCase() + (v.dia<5 ? '-feira' : '') +
+  ' (concluído em ' + brCurto(r.data) + (r.nome ? ' por ' + esc(r.nome) : '') + '). Verifique com o servo de território antes de pegar.'; }
+function cartao(v){
+  const t = terr(v.terr), af = v.turno==='rural';
+  const hoje = af ? (dataAfastado(5)===hojeISO() || dataAfastado(6)===hojeISO()) : (v.dia===diaHoje() && !hojeEhAfastado(v.dia));
+  const espera = !af && v.dia===diaHoje() && hojeEhAfastado(v.dia);
+  let h = '<article class="card' + (hoje?' hoje':'') + '"><div class="card-topo"><span class="dia">' + esc(af ? 'Último sábado e domingo do mês' : (camp() && v.dia===6 ? 'Todos os grupos · ' : v.grupo ? v.grupo + ' · ' : '') + DIAS[v.dia] + ' ' + brCurto(proxData(v.dia))) + '</span>' +
+    (hoje ? '<span class="pill">Hoje</span>' : '<span class="pill suave">' + (af ? datasAfastado() : v.turno==='tarde' ? 'Tarde' : 'Manhã') + '</span>') + '</div>';
+  if(espera) h += '<div class="nota">Hoje é dia de território rural. Este cartão fica em espera.</div>';
+  h += '<div class="saida">' + (af ? 'Grupos: <b>' + esc(v.grupo) + '</b><br>' : '') + 'Saída: <b>' + esc(v.local) + '</b><br>' + (v.dia===5 ? 'Dirigente de ' + brCurto(af ? dataAfastado(5) : proxSabado()) : 'Dirigente') + ': <b>' + esc(dirigenteDe(v)) + '</b></div>';
+  if(t){
+    const rep = v.pego ? null : jaFeitoNoMes(v, t);
+    h += '<div class="terr' + (rep ? '" style="color:var(--danger)' : '') + '">' + esc(t.nome) + '</div>' + (v.pego ? '<div class="status">Status: em andamento</div>' : (rep ? '<div class="status alerta">Já trabalhado neste mês</div><div class="alerta-mes">' + textoAlerta(v, rep) + '</div>' : '<div class="status livre">' + (camp() ? 'Livre: próximo da campanha' : 'Livre: sugerido pelo rodízio') + '</div>')) + '<div class="meta">' + (semCiclo(t.tipo) ? '<span class="pill esp">' + TIPOS[t.tipo] + '</span>' : '') +
+      (v.pego ? '<span>desde ' + brCurto(v.desde) + (v.por ? ' · ' + esc(v.por) : '') + '</span>' : '') + '</div>' + obsResumo(t) + '<div class="acoes">' +
+      (linkOk(t.link) ? '<a class="btn" href="' + esc(t.link) + '" target="_blank" rel="noopener">Abrir cartão</a>' : '') +
+      (linkOk(t.video) ? '<a class="btn" href="' + esc(t.video) + '" target="_blank" rel="noopener">▶ Vídeo do território</a>' : '') +
+      '<button class="btn" data-acao="obs" data-id="' + t.id + '">' + ((t.notas||[]).length ? 'Anotações (' + t.notas.length + ')' : 'Onde parou') + '</button>' +
+      (v.pego ? '<button class="btn cheio" data-acao="concluir" data-id="' + v.id + '">Concluir</button>' : '<button class="btn cheio" data-acao="pegar" data-id="' + v.id + '">Pegar território</button>' +
+        (alternativas(v).length ? '<button class="btn" data-acao="outros" data-id="' + v.id + '">Outros livres (' + alternativas(v).length + ')</button>' : ''));
+  } else h += '<div class="terr vazio">Sem cartão livre para esta saída</div><div class="acoes">';
+  if(admin) h += '<button class="btn leve" data-acao="trocar" data-id="' + v.id + '">Trocar</button>';
+  return h + '</div></article>';
+}
+function faixaCampanha(){ const c = camp(); if(!c) return '';
+  const n = c.feitos.length, pct = c.total ? Math.round(100 * n / c.total) : 0;
+  return '<div class="camp"><b>Campanha: ' + esc(c.nome) + '</b><span>' + (c.fim ? 'até ' + br(c.fim) + ' · ' : '') + n + ' de ' + c.total + ' territórios concluídos</span>' +
+    '<div class="barra"><i style="width:' + pct + '%"></i></div><small>Todos os grupos saem juntos. Território concluído não volta para a lista.</small></div>'; }
+function telaSemana(){
+  const normais = vagasAtivas().filter(v => v.turno!=='rural');
+  return faixaCampanha() + ''+
+    '<h2>Segunda a sábado (toda semana)</h2><div class="grade">' + normais.filter(v => v.dia<6).map(cartao).join('') + '</div>' +
+    '<h2>' + (camp() ? 'Domingo (todos os grupos juntos)' : 'Domingo, por grupo (toda semana)') + '</h2><div class="grade">' + normais.filter(v => v.dia===6).map(cartao).join('') + '</div>' +
+    '<h2>Rural: só em ' + datasAfastado() + '</h2><p class="sub">Uma vez por mês, no último sábado e no último domingo, todos os grupos saem juntos para o mesmo território rural, nos dois dias. Nos outros fins de semana valem os cartões de sábado e de domingo acima.</p><div class="grade">' +
+    S.vagas.filter(v => v.turno==='rural').map(cartao).join('') + '</div>' + telaEscala();
+}
+function telaEscala(){
+  const hoje = hojeISO(), prox = proxSabado();
+  const lista = (S.escala||[]).slice().sort((a,b) => a.data.localeCompare(b.data)).filter(x => x.data >= hoje);
+  let h = '<h2 id="escala">Escala de sábado: dirigentes</h2><p class="sub">O dirigente recebe um lembrete por WhatsApp dois dias antes e um dia antes do sábado dele.</p>';
+  if(admin) h += '<div class="acoes" style="margin-bottom:10px"><button class="btn mini" data-acao="escala" data-id="">Adicionar sábado</button></div>';
+  if(!lista.length) return h + '<div class="vaziotxt">Nenhum sábado futuro na escala.</div>';
+  return h + '<div class="lista">' + lista.map(x => '<div class="linha"><div><b>' + esc(x.nome) + '</b><small>' + br(x.data) + (x.data===prox ? ' · próximo sábado' : '') +
+    (ehUltimoSabado(x.data) ? ' · território rural' : '') + '</small></div>' + (admin ? '<button class="btn mini" data-acao="escala" data-id="' + x.data + '">Editar</button>' : '') + '</div>').join('') + '</div>';
+}
+function telaControle(){
+  const pre = mesRef.a + '-' + String(mesRef.m+1).padStart(2,'0');
+  const doMes = S.historico.filter(h => h.data.startsWith(pre)).sort((a,b) => b.data.localeCompare(a.data));
+  const ativos = S.territorios.filter(t => t.ativo);
+  const nomeMes = new Date(mesRef.a, mesRef.m, 1).toLocaleDateString('pt-BR', {month:'long', year:'numeric'});
+  let h = '<div class="mes"><button class="btn mini leve" data-acao="mes" data-id="-1" aria-label="Mês anterior">◀</button><strong>' + esc(nomeMes) +
+    '</strong><button class="btn mini leve" data-acao="mes" data-id="1" aria-label="Próximo mês">▶</button></div>';
+  h += '<div class="resumo"><div><strong>' + doMes.length + '</strong><span>conclusões no mês</span></div><div><strong>' + presos().size +
+    '</strong><span>em andamento agora</span></div><div><strong>' + ativos.filter(t => !doMes.some(x => x.terr===t.id)).length + '</strong><span>sem conclusão no mês</span></div></div>';
+  h += '<div class="rolagem"><table><thead><tr><th>Território</th>' + LETRA.map((l,d) => '<th title="' + DIAS[d] + '">' + l + '</th>').join('') + '</tr></thead><tbody>';
+  for(const tipo of Object.keys(TIPOS)){
+    const dias = tipo==='rural' ? [5,6] : diasDoTipo(tipo);
+    h += '<tr class="grupo"><td colspan="8">' + TIPOS[tipo] + '</td></tr>';
+    for(const t of ativos.filter(x => x.tipo===tipo)){
+      const ult = ultima(t.id);
+      h += '<tr><td>' + esc(t.nome) + '<small>' + (semCiclo(tipo) ? (ult ? 'última: ' + brCurto(ult) : 'ainda não saiu') :
+        'ciclo ' + t.ciclo + ' · ' + dias.filter(d => t.feitos.includes(d)).length + '/' + dias.length) + '</small></td>';
+      for(let d=0; d<7; d++){
+        const feito = doMes.find(x => x.terr===t.id && x.dia===d), andando = S.vagas.some(v => v.pego && v.terr===t.id && (v.dia===d || (v.turno==='rural' && d>=5)));
+        let c = dias.includes(d) ? '<span class="cel">·</span>' : '';
+        if(feito) c = '<span class="cel mes-ok" title="Concluído em ' + br(feito.data) + ' por ' + esc(feito.nome) + '">' + feito.data.slice(8) + '</span>';
+        else if(t.feitos.includes(d)) c = '<span class="cel ciclo-ok" title="Feito em mês anterior, neste ciclo">✓</span>';
+        else if(andando) c = '<span class="cel andando" title="Em andamento">●</span>';
+        h += '<td>' + c + '</td>';
+      }
+      h += '</tr>';
+    }
+  }
+  h += '</tbody></table></div><div class="legenda"><span><span class="cel mes-ok">12</span>concluído neste mês (dia)</span>' +
+    '<span><span class="cel ciclo-ok">✓</span>feito em mês anterior</span><span><span class="cel andando">●</span>em andamento</span><span>em branco: o cartão não roda nesse dia</span></div>';
+  h += '<h2>Conclusões do mês</h2>';
+  if(!doMes.length) h += '<div class="vaziotxt">Nenhuma conclusão registrada neste mês.</div>';
+  else h += '<div class="lista">' + doMes.map(x => { const t = terr(x.terr), v = vaga(x.vaga);
+    return '<div class="linha"><div><b>' + esc(t ? t.nome : 'Cartão removido') + '</b><small>' + br(x.data) + ' · ' + esc(v ? nomeVaga(v) : DIAS[x.dia]) +
+      ' · por ' + esc(x.nome) + '</small></div>' + (admin ? '<button class="btn mini perigo" data-acao="desfazer" data-id="' + x.id + '">Desfazer</button>' : '') + '</div>'; }).join('') + '</div>';
+  return h;
+}
+let anoServ = (() => { const d = new Date(); return d.getMonth()>=8 ? d.getFullYear()+1 : d.getFullYear(); })();
+function telaRegistro(){
+  const ini = (anoServ-1) + '-09-01', fim = anoServ + '-08-31';
+  let h = '<div class="mes"><button class="btn mini leve" data-acao="ano" data-id="-1" aria-label="Ano anterior">◀</button><strong>Ano de serviço ' + anoServ +
+    '</strong><button class="btn mini leve" data-acao="ano" data-id="1" aria-label="Próximo ano">▶</button></div>' +
+    '<p class="sub" style="margin-top:0">Registro de Designação de Território, de setembro de ' + (anoServ-1) + ' a agosto de ' + anoServ + '. Preenchido sozinho a partir das designações e conclusões.</p>';
+  h += '<div class="acoes" style="margin-bottom:14px"><button class="btn cheio" data-acao="pdf">Baixar PDF da folha</button></div>';
+  h += '<div class="rolagem"><table class="reg"><thead><tr><th>Terr. n.º</th><th>Última data concluída</th><th>1ª designação</th><th>2ª designação</th><th>3ª designação</th><th>4ª designação</th></tr></thead><tbody>';
+  for(const tipo of Object.keys(TIPOS)){
+    h += '<tr class="grupo"><td colspan="6">' + TIPOS[tipo] + '</td></tr>';
+    for(const t of S.territorios.filter(x => x.ativo && x.tipo===tipo)){
+      const regs = S.historico.filter(x => x.terr===t.id && x.data>=ini && x.data<=fim).map(x => ({para:x.para || x.nome, desig:x.desig || '', concl:x.data}))
+        .sort((a,b) => (a.desig||a.concl).localeCompare(b.desig||b.concl));
+      const v = S.vagas.find(x => x.terr===t.id && x.pego);
+      if(v && v.desde>=ini && v.desde<=fim) regs.push({para:dirigenteDe(v), desig:v.desde, concl:''});
+      let antes = ''; for(const x of S.historico){ if(x.terr===t.id && x.data<ini && x.data>antes) antes = x.data; }
+      for(let i=0; i<Math.max(1, Math.ceil(regs.length/4)); i++){
+        h += '<tr><td>' + (i ? '' : esc(t.nome)) + '</td><td>' + (i || !antes ? '' : br(antes)) + '</td>';
+        for(let j=0; j<4; j++){ const r = regs[i*4+j];
+          h += '<td>' + (r ? '<b>' + esc(r.para) + '</b><small>' + (r.desig ? brCurto(r.desig) : '?') + ' → ' + (r.concl ? brCurto(r.concl) : 'em andamento') + '</small>' : '') + '</td>'; }
+        h += '</tr>';
+      }
+    }
+  }
+  return h + '</tbody></table></div><div class="legenda"><span>Em cada designação: para quem foi designado, data da designação → data da conclusão.</span></div>';
+}
+// Gera a folha "Registro de Designação de Território" em PDF, no formato do formulário.
+async function baixarPdf(){
+  if(!window.jspdf){ toast('Não consegui carregar o gerador de PDF. Confira a internet e tente de novo.'); return; }
+  const ini = (anoServ-1) + '-09-01', fim = anoServ + '-08-31', corpo = [];
+  const centro = {halign:'center', valign:'middle'};
+  for(const t of S.territorios.filter(x => x.ativo)){
+    const regs = S.historico.filter(x => x.terr===t.id && x.data>=ini && x.data<=fim).map(x => ({para:x.para || x.nome, desig:x.desig || '', concl:x.data}))
+      .sort((a,b) => (a.desig||a.concl).localeCompare(b.desig||b.concl));
+    const v = S.vagas.find(x => x.terr===t.id && x.pego);
+    if(v && v.desde>=ini && v.desde<=fim) regs.push({para:dirigenteDe(v), desig:v.desde, concl:''});
+    let antes = ''; for(const x of S.historico){ if(x.terr===t.id && x.data<ini && x.data>antes) antes = x.data; }
+    for(let i=0; i<Math.max(1, Math.ceil(regs.length/4)); i++){
+      const a = [{content:t.nome, rowSpan:2, styles:Object.assign({fontStyle:'bold'}, centro)}, {content:i ? '' : br(antes), rowSpan:2, styles:centro}], b = [];
+      for(let j=0; j<4; j++){ const r = regs[i*4+j];
+        a.push({content:r ? r.para.toUpperCase() : '', colSpan:2, styles:centro});
+        b.push({content:r && r.desig ? brCurto(r.desig) : '', styles:centro}, {content:r && r.concl ? brCurto(r.concl) : '', styles:centro}); }
+      corpo.push(a, b);
+    }
+  }
+  const doc = new window.jspdf.jsPDF({orientation:'landscape', unit:'mm', format:'a4'});
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('REGISTRO DE DESIGNAÇÃO DE TERRITÓRIO', 148.5, 14, {align:'center'});
+  doc.setFontSize(10); doc.text('Ano de Serviço: ' + anoServ, 14, 22);
+  doc.setFont('helvetica','normal'); doc.text('Congregação Bela Vista', 283, 22, {align:'right'});
+  const des = [], datas = [];
+  for(let j=0; j<4; j++){ des.push({content:'Designado para', colSpan:2}); datas.push('Data da designação', 'Data da conclusão'); }
+  doc.autoTable({startY:26, theme:'grid', margin:{left:10, right:10, bottom:14}, rowPageBreak:'avoid',
+    head:[[{content:'Terr. n.º', rowSpan:2}, {content:'Última data concluída*', rowSpan:2}].concat(des), datas],
+    body:corpo, styles:{fontSize:8, cellPadding:1.4, lineColor:[90,90,90], lineWidth:0.2, textColor:[20,20,20], minCellHeight:6},
+    headStyles:{fillColor:[225,232,244], textColor:[20,20,20], halign:'center', valign:'middle', fontStyle:'bold'},
+    columnStyles:{0:{cellWidth:33}, 1:{cellWidth:24}},
+    didDrawPage:() => { doc.setFontSize(7); doc.text('*Ao iniciar uma nova folha, use esta coluna para registrar a data em que cada território foi concluído pela última vez.', 10, 203); }});
+  const nome = 'registro-de-territorios-' + anoServ + '.pdf';
+  try{
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if(dl){ await dl.save({filename:nome, data:doc.output('blob')}); toast('PDF salvo.'); }
+    else doc.save(nome);
+  }catch(e){ if(e && e.code==='declined') return; toast('Não foi possível salvar o PDF aqui. Tente abrir a página no navegador.'); }
+}
+function telaCadastro(){
+  let h = admin ? '<div class="acoes" style="margin-bottom:14px"><button class="btn cheio" data-acao="novo">Adicionar cartão</button>' +
+      '<button class="btn leve" data-acao="senha">Trocar senha</button><button class="btn perigo" data-acao="zerar">Zerar tudo</button></div>'
+    : '<div class="aviso">Entre em Administração para editar cartões, tipos, links, dirigentes e locais de saída.</div>';
+  const linha = t => '<div class="linha' + (t.ativo?'':' inativo') + '"><div><b>' + esc(t.nome) + '</b><small>' + (linkOk(t.link) ? 'com cartão' : 'sem link') + (linkOk(t.video) ? ' · com vídeo' : ' · sem vídeo') + (t.ativo?'':' · inativo') +
+    ((t.notas||[]).length ? ' · ' + t.notas.length + (t.notas.length>1 ? ' anotações' : ' anotação') : '') +
+    '</small></div><div style="display:flex;gap:6px;flex:none"><button class="btn mini leve" data-acao="obs" data-id="' + t.id + '">Anotações</button>' + (admin ? '<button class="btn mini" data-acao="editar" data-id="' + t.id + '">Editar</button>' : '') + '</div></div>';
+  const quando = {tarde:'rodam nas saídas da tarde', manha:'rodam nas manhãs de terça, quarta e domingo; no sábado ficam como opção', afastado:'rodam aos sábados; depois de concluído, cada um descansa 30 dias', rural:'só no último sábado e domingo do mês'};
+  for(const tipo of Object.keys(TIPOS)){ const l = S.territorios.filter(t => t.tipo===tipo);
+    h += '<h2>' + TIPOS[tipo] + ' (' + l.length + ')</h2><p class="sub">' + quando[tipo] + '</p><div class="lista">' + l.map(linha).join('') + '</div>'; }
+  h += '<h2>Saídas</h2><div class="lista">' + S.vagas.map(v => '<div class="linha"><div><b>' + esc(nomeVaga(v)) + '</b><small>' + esc(TIPOS[v.turno]) + ' · ' + esc(v.local) + ' · ' + esc(v.dirigente) +
+    '</small></div>' + (admin ? '<button class="btn mini" data-acao="saida" data-id="' + v.id + '">Editar</button>' : '') + '</div>').join('') + '</div>';
+  return h;
+}
+// Data de hoje no topo; muda sozinha quando o dia vira.
+let diaMostrado = '';
+function mostrarHoje(){ const d = new Date(), sem = d.toLocaleDateString('pt-BR', {weekday:'long'});
+  document.getElementById('hoje').textContent = 'Hoje é ' + sem + ', ' + br(hojeISO()); diaMostrado = hojeISO(); }
+// Endereço da página só de leitura (programacao.html), que fica na mesma pasta do sistema.
+const ADM = ['registro', 'cadastro', 'campanha', 'copias', 'textos'];
+function telaCampanha(){
+  const c = S.campanha, nomes = ids => ids.map(id => terr(id)).filter(Boolean).map(t => esc(t.nome)).join(', ') || 'nenhum';
+  if(camp()){
+    const falta = S.territorios.filter(t => t.ativo && (c.tipos || []).includes(t.tipo) && !c.feitos.includes(t.id)).map(t => t.id);
+    return '<h2>Campanha em andamento</h2>' + faixaCampanha() +
+      '<div class="card"><div class="saida">Início: <b>' + br(c.inicio) + '</b>' + (c.fim ? '<br>Fim previsto: <b>' + br(c.fim) + '</b>' : '') + '</div>' +
+      '<div class="saida">Concluídos (' + c.feitos.length + '): <b>' + nomes(c.feitos) + '</b></div><div class="saida">Faltam (' + falta.length + '): <b>' + nomes(falta) + '</b></div>' +
+      '<div class="acoes"><button class="btn perigo" data-acao="camp-encerrar">Encerrar campanha</button></div></div>' +
+      '<p class="sub" style="margin-top:14px">Ao encerrar, o rodízio normal volta do ponto em que estava antes da campanha.</p>';
+  }
+  return '<h2>Campanha</h2><p class="sub" style="margin-top:0">Use em convites para o congresso, para a Celebração e outras campanhas. Enquanto ela durar, todos os grupos saem juntos de segunda a domingo, ' +
+    'cada dia tem o seu território até concluir, e o que foi concluído não volta para a lista. O rodízio normal fica guardado e volta quando você encerrar.</p>' +
+    (c && !c.ativa ? '<div class="nota" style="margin-bottom:12px">Última campanha: ' + esc(c.nome) + ', de ' + br(c.inicio) + ' a ' + br(c.encerrada || c.inicio) + ', com ' + (c.feitos || []).length + ' de ' + c.total + ' territórios concluídos.</div>' : '') +
+    '<form data-form="camp-iniciar"><div class="campo"><label for="f-cnome">Nome da campanha</label><input id="f-cnome" placeholder="Ex.: Convite para o congresso"></div>' +
+    '<div class="campo"><label for="f-cfim">Fim previsto (opcional)</label><input id="f-cfim" type="date" min="' + hojeISO() + '"></div>' +
+    '<div class="campo" style="margin-bottom:6px"><label>Territórios que participam</label></div><div class="marcas">' +
+    Object.keys(TIPOS).map(k => '<label class="marca"><input type="checkbox" id="f-ct-' + k + '" checked> ' + TIPOS[k] + ' (' + S.territorios.filter(t => t.ativo && t.tipo===k).length + ')</label>').join('') + '</div>' +
+    '<p class="erro" id="erro"></p><div class="acoes"><button type="submit" class="btn cheio">Iniciar campanha agora</button></div></form>';
+}
+// Texto bíblico da semana: a Administração cadastra uma lista e o sistema mostra um por semana, em ordem, passando no topo.
+function semanaN(){ const d = new Date(); d.setDate(d.getDate() - (d.getDay()+6)%7); return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 6048e5); }
+function textoDaSemana(){ const l = ((S && S.textos) || []).filter(Boolean); return l.length ? l[semanaN() % l.length] : ''; }
+let lemaAtual = null;
+function mostrarLema(){ const t = textoDaSemana(); if(t===lemaAtual) return; lemaAtual = t;
+  const el = document.getElementById('lema'); el.hidden = !t; el.innerHTML = t ? '<span style="--dur:' + Math.max(14, Math.round(t.length * 0.22)) + 's">' + esc(t) + '</span>' : ''; }
+function telaTextos(){
+  const l = (S.textos||[]), atual = textoDaSemana();
+  return '<h2>Textos bíblicos do topo</h2><p class="sub" style="margin-top:0">Escreva um texto por linha, com a referência no fim. O sistema mostra um por semana, na ordem da lista, e recomeça quando ela acaba. ' +
+    'Ele aparece passando no topo do sistema e da página de programação.</p>' +
+    (atual ? '<div class="nota" style="margin-bottom:12px">Nesta semana: ' + esc(atual) + '</div>' : '') +
+    '<form data-form="textos"><div class="campo"><label for="f-textos">Textos (um por linha)</label><textarea id="f-textos" rows="10" placeholder="Escreva o texto como está na sua Bíblia e termine com a referência. Exemplo de formato: texto do versículo (Mateus 24:14)">' + esc(l.join('\n')) + '</textarea></div>' +
+    '<p class="erro" id="erro"></p><div class="acoes"><button type="submit" class="btn cheio">Salvar textos</button></div></form>';
+}
+/* ============ CÓPIAS DE SEGURANÇA ============ */
+// A planilha guarda uma cópia dos dados todo dia (e sempre que alguém pedir). Aqui dá para ver a lista e restaurar.
+let copias = null, copiasErro = '', copiasBuscando = false;
+async function carregarCopias(){
+  if(copiasBuscando) return; copiasBuscando = true; copiasErro = '';
+  try{ const r = await (await fetch(API + '?acao=copias')).json();
+    if(r && Array.isArray(r.copias)) copias = r.copias;
+    else { copias = []; copiasErro = 'A planilha ainda está com a versão antiga do código. Publique a nova versão no Google para usar as cópias por aqui.'; }
+  }catch(e){ copias = []; copiasErro = 'Não consegui buscar as cópias. Confira a internet.'; }
+  copiasBuscando = false; if(aba==='copias') desenhar();
+}
+function telaCopias(){
+  if(copias===null){ carregarCopias(); return '<h2>Cópias de segurança</h2><div class="vaziotxt">Buscando as cópias…</div>'; }
+  let h = '<h2>Cópias de segurança</h2><p class="sub" style="margin-top:0">A planilha guarda uma cópia de todos os dados todo dia, na hora dos lembretes, e mantém as 20 mais recentes. ' +
+    'Se alguém alterar algo por engano, restaure a cópia de antes do erro.</p>' +
+    '<div class="acoes" style="margin-bottom:14px"><button class="btn cheio" data-acao="copia-agora">Fazer cópia agora</button><button class="btn leve" data-acao="copias-atualizar">Atualizar lista</button></div>';
+  if(copiasErro) return h + '<div class="aviso">' + esc(copiasErro) + '</div>';
+  if(!copias.length) return h + '<div class="vaziotxt">Nenhuma cópia ainda. A primeira é feita hoje, na hora dos lembretes, ou agora pelo botão acima.</div>';
+  return h + '<div class="lista">' + copias.map(c => '<div class="linha"><div><b>' + esc(c.quando) + '</b><small>' + esc(c.motivo) + '</small></div>' +
+    '<button class="btn mini perigo" data-acao="copia-restaurar" data-id="' + esc(c.id) + '">Restaurar</button></div>').join('') + '</div>';
+}
+function linkProgramacao(){ return location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '') + 'programacao.html'; }
+function telaProgramacao(){
+  const link = linkProgramacao(), txt = 'Programação das saídas de campo da semana – Congregação Bela Vista: ' + link;
+  return '<h2>Programação para compartilhar</h2><p class="sub" style="margin-top:0">Este link abre uma página só de leitura, com a programação da semana, o fim de semana rural e os dirigentes de sábado. ' +
+    'Quem abre não vê os botões do sistema e não consegue alterar nada.</p>' +
+    '<div class="card"><div class="campo" style="margin:0"><label for="f-link">Link da programação</label><input id="f-link" readonly value="' + esc(link) + '"></div>' +
+    '<div class="acoes"><button class="btn cheio" data-acao="copiar-link">Copiar link</button>' +
+    '<a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">Abrir programação</a>' +
+    '<a class="btn" data-acao="zap-link" href="https://api.whatsapp.com/send?text=' + encodeURIComponent(txt) + '" target="_blank" rel="noopener">Enviar pelo WhatsApp</a></div></div>' +
+    '<p class="sub" style="margin-top:14px">Compartilhe somente este link no grupo. O endereço do sistema fica só com os dirigentes.</p>';
+}
+function desenhar(){
+  mostrarHoje(); mostrarLema();
+  if(!S) return;
+  const h = (location.hash||'').replace('#','');
+  aba = ['semana','controle','programacao'].concat(ADM).includes(h) ? h : 'semana';
+  const grupo = ADM.includes(aba) ? 'adm' : aba;
+  document.querySelectorAll('.abas a').forEach(a => { if(a.dataset.aba===grupo) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  if(grupo==='adm'){
+    if(!admin){ app.innerHTML = '<div class="card" style="max-width:420px;margin:30px auto;text-align:center"><div class="terr">Área protegida</div><div class="saida">O Registro, os Cartões e as Cópias de segurança só abrem com a senha da administração.</div><div class="acoes"><button class="btn cheio" data-acao="adm">Entrar com a senha</button></div></div>'; return; }
+    const sub = [['registro','Registro'],['cadastro','Cartões'],['campanha','Campanha'],['copias','Cópias de segurança'],['textos','Textos bíblicos']].map(x => '<a href="#' + x[0] + '"' + (x[0]===aba ? ' class="on" aria-current="page"' : '') + '>' + x[1] + '</a>').join('') + '<button class="sair" data-acao="adm">Sair</button>';
+    app.innerHTML = '<div class="subnav">' + sub + '</div>' + (aba==='registro' ? telaRegistro() : aba==='cadastro' ? telaCadastro() : aba==='textos' ? telaTextos() : aba==='campanha' ? telaCampanha() : telaCopias());
+    return;
+  }
+  app.innerHTML = aba==='programacao' ? telaProgramacao() : aba==='controle' ? telaControle() : telaSemana();
 }
 
-async function concluirTerritorio(dia, territorioId, responsavel){
+/* ============ JANELAS ============ */
+function abrir(html, semFoco){ camada.innerHTML = '<div class="fundo" data-acao="fechar-fundo"><div class="modal" role="dialog" aria-modal="true">' + html + '</div></div>';
+  const f = camada.querySelector('input,select'); if(f && !semFoco) f.focus(); }
+function fechar(){ camada.innerHTML = ''; }
+let tempoToast;
+function toast(msg){ const el = document.createElement('div'); el.className='toast'; el.setAttribute('role','status'); el.textContent = msg;
+  document.querySelectorAll('.toast').forEach(x => x.remove()); document.body.appendChild(el); clearTimeout(tempoToast); tempoToast = setTimeout(() => el.remove(), 5000); }
+const botoes = (ok, classe) => '<p class="erro" id="erro"></p><div class="acoes"><button type="button" class="btn leve" data-acao="fechar">Cancelar</button><button type="submit" class="btn ' + (classe||'cheio') + '">' + ok + '</button></div>';
+const opcoes = (obj, atual) => Object.keys(obj).map(k => '<option value="' + k + '"' + (k===atual?' selected':'') + '>' + obj[k] + '</option>').join('');
+let ultimoNome = '';
 
-await client
-.from('historico')
-.insert({
-territorio: territorioId,
-responsavel: responsavel,
-dia_semana: dia,
-data_conclusao: new Date()
-})
+const janelas = {
+  concluir(id){ const v = vaga(id), t = terr(v.terr);
+    abrir('<form data-form="concluir" data-id="' + id + '"><h3>Concluir ' + esc(t.nome) + '</h3><p>' + esc(nomeVaga(v)) + '. Depois de confirmar, este cartão é liberado e outro entra no lugar.' +
+      ((t.notas||[]).length ? ' As anotações de onde parou são apagadas.' : '') + '</p>' +
+      '<div class="campo"><label for="f-nome">Seu nome</label><input id="f-nome" autocomplete="name" value="' + esc(ultimoNome) + '"></div>' +
+      '<div class="campo"><label for="f-data">Data de conclusão</label><input id="f-data" type="date" max="' + hojeISO() + '" value="' + hojeISO() + '"></div>' + botoes('Confirmar conclusão') + '</form>'); },
+  pegar(arg){ const p = String(arg).split('|'), id = p[0], v = vaga(id), sug = terr(v.terr), t = (p[1] && terr(p[1])) || sug;
+    abrir('<form data-form="pegar" data-id="' + id + '"><h3>Pegar território</h3><p>' + esc(nomeVaga(v)) + '. Ao confirmar, o território fica em andamento e a designação entra no registro com a data de hoje.</p>' +
+      '<div class="campo"><label>Território</label><div class="terr">' + esc(t.nome) + '</div>' + (t!==sug ? '<small style="color:var(--muted)">Escolhido no lugar do sugerido pelo rodízio (' + esc(sug.nome) + ').</small>' : '') +
+      (jaFeitoNoMes(v, t) ? '<div class="alerta-mes" style="margin-top:8px">' + textoAlerta(v, jaFeitoNoMes(v, t)) + '</div>' : '') +
+      '<input type="hidden" id="f-pterr" value="' + t.id + '"></div>' +
+      '<div class="campo"><label for="f-pnome">Seu nome</label><input id="f-pnome" autocomplete="name" value="' + esc(ultimoNome) + '"></div>' + botoes('Confirmar') + '</form>', true); },
+  outros(id){ const v = vaga(id), alt = alternativas(v), sug = terr(v.terr);
+    abrir('<h3>Outros territórios livres</h3><p>' + esc(nomeVaga(v)) + '. O rodízio sugere ' + esc(sug.nome) + ', mas estes também podem ser usados neste dia. Toque em um para pegar.</p>' +
+      (alt.length ? '<div class="lista">' + alt.map(a => '<button type="button" class="btn' + (jaFeitoNoMes(v, a) ? ' atencao" title="Já trabalhado neste mês neste dia da semana' : '') + '" data-acao="pegar" data-id="' + id + '|' + a.id + '">' + (jaFeitoNoMes(v, a) ? '⚠ ' : '') + esc(a.nome) + '</button>').join('') + '</div>'
+        : '<div class="vaziotxt">Nenhum outro território livre para este dia agora.</div>') +
+      '<div class="acoes" style="margin-top:14px"><button type="button" class="btn leve" data-acao="fechar">Fechar</button></div>', true); },
+  adm(){ if(admin){ admin=false; desenhar(); return; }
+    abrir('<form data-form="adm"><h3>Administração</h3><p>Para ver o Registro, trocar cartões, desfazer conclusões e editar o cadastro.</p>' +
+      '<div class="campo"><label for="f-senha">Senha</label><input id="f-senha" type="password" autocomplete="off" autocapitalize="off"></div>' + botoes('Entrar') + '</form>'); },
+  trocar(id){ const v = vaga(id), oc = ocupados(), livres = S.territorios.filter(t => t.ativo && !oc.has(t.id)), sug = proximo(v);
+    const op = t => '<option value="' + t.id + '">' + esc(t.nome) + (t.id===sug ? ' (sugerido)' : '') + '</option>';
+    const g = (rot, arr) => arr.length ? '<optgroup label="' + rot + '">' + arr.map(op).join('') + '</optgroup>' : '';
+    abrir('<form data-form="trocar" data-id="' + id + '"><h3>Trocar cartão</h3><p>' + esc(nomeVaga(v)) + '. O cartão atual volta para a fila sem contar como concluído, e o novo fica livre até alguém pegar.</p>' +
+      '<div class="campo"><label for="f-terr">Cartão</label><select id="f-terr">' +
+      g(TIPOS[v.turno], livres.filter(t => t.tipo===v.turno).sort((a,b) => (b.id===sug)-(a.id===sug))) +
+      Object.keys(TIPOS).filter(k => k!==v.turno).map(k => g(TIPOS[k], livres.filter(t => t.tipo===k))).join('') +
+      '<option value="">Deixar sem cartão</option></select></div>' + botoes('Trocar') + '</form>'); },
+  editar(id){ const t = id ? terr(id) : {id:'', nome:'', tipo:'manha', link:'', ativo:true};
+    abrir('<form data-form="editar" data-id="' + t.id + '"><h3>' + (id ? 'Editar cartão' : 'Novo cartão') + '</h3><p>O link é o do cartão no Google Drive. O vídeo mostra onde o território começa e termina, para quem não conhece a região.</p>' +
+      '<div class="campo"><label for="f-tnome">Nome</label><input id="f-tnome" value="' + esc(t.nome) + '"></div>' +
+      '<div class="campo"><label for="f-tipo">Tipo</label><select id="f-tipo">' + opcoes(TIPOS, t.tipo) + '</select></div>' +
+      '<div class="campo"><label for="f-link">Link do cartão</label><input id="f-link" type="url" inputmode="url" placeholder="https://drive.google.com/..." value="' + esc(t.link) + '"></div>' +
+      '<div class="campo"><label for="f-video">Link do vídeo do território (opcional)</label><input id="f-video" type="url" inputmode="url" placeholder="Link do Drive ou do YouTube" value="' + esc(t.video || '') + '"></div>' +
+      '<div class="campo"><label for="f-ativo">Situação</label><select id="f-ativo">' + opcoes({1:'Ativo', 0:'Inativo (fora do rodízio)'}, t.ativo?'1':'0') + '</select></div>' + botoes('Salvar') + '</form>'); },
+  novo(){ janelas.editar(''); },
+  saida(id){ const v = vaga(id), af = v.turno==='rural';
+    abrir('<form data-form="saida" data-id="' + id + '"><h3>' + esc(nomeVaga(v)) + '</h3><p>Local de saída, dirigente' + (af ? ' e grupos.' : ' e período.') + '</p>' +
+      '<div class="campo"><label for="f-local">Local de saída</label><input id="f-local" value="' + esc(v.local) + '"></div>' +
+      '<div class="campo"><label for="f-dir">Dirigente</label><input id="f-dir" value="' + esc(v.dirigente) + '"></div>' +
+      (af ? '<div class="campo"><label for="f-grupo">Grupos que saem juntos</label><input id="f-grupo" value="' + esc(v.grupo) + '"></div>'
+          : v.turno==='afastado' ? '' : '<div class="campo"><label for="f-turno">Período (define o tipo de cartão)</label><select id="f-turno">' + opcoes({manha:'Manhã', tarde:'Tarde'}, v.turno) + '</select></div>') + botoes('Salvar') + '</form>'); },
+  senha(){ abrir('<form data-form="senha"><h3>Trocar senha</h3><p>Senha da administração.</p><div class="campo"><label for="f-nova">Nova senha</label><input id="f-nova" autocomplete="off"></div>' + botoes('Salvar') + '</form>'); },
+  desfazer(id){ const h = S.historico.find(x => x.id===id), t = terr(h.terr);
+    abrir('<form data-form="desfazer" data-id="' + id + '"><h3>Desfazer conclusão?</h3><p>' + esc(t ? t.nome : '') + ', ' + br(h.data) + ', por ' + esc(h.nome) + '. O cartão volta para a saída em que estava.</p>' + botoes('Desfazer', 'perigo') + '</form>'); },
+  escala(data){ const e = (S.escala||[]).find(x => x.data===data) || {data:'', nome:''}, nomes = [...new Set((S.escala||[]).map(x => x.nome))].sort();
+    abrir('<form data-form="escala" data-id="' + esc(data||'') + '"><h3>' + (data ? 'Editar sábado' : 'Adicionar sábado') + '</h3><p>Escreva o nome igual ao da aba "Dirigentes" da planilha, para o aviso de WhatsApp achar o telefone.</p>' +
+      '<div class="campo"><label for="f-edata">Data do sábado</label><input id="f-edata" type="date" value="' + esc(e.data) + '"></div>' +
+      '<div class="campo"><label for="f-enome">Dirigente</label><input id="f-enome" list="f-nomes" autocomplete="off" value="' + esc(e.nome) + '"><datalist id="f-nomes">' + nomes.map(n => '<option value="' + esc(n) + '">').join('') + '</datalist></div>' +
+      '<p class="erro" id="erro"></p><div class="acoes"><button type="button" class="btn leve" data-acao="fechar">Cancelar</button>' +
+      (data ? '<button type="button" class="btn perigo" data-acao="esc-apagar" data-id="' + esc(data) + '">Remover</button>' : '') + '<button type="submit" class="btn cheio">Salvar</button></div></form>'); },
+  'esc-apagar'(data){ if(!admin) return; S.escala = (S.escala||[]).filter(x => x.data!==data); salvar(); fechar(); desenhar(); toast('Sábado removido da escala.'); },
+  obs(id){ const t = terr(id), n = t.notas||[];
+    abrir('<form data-form="obs" data-id="' + id + '"><h3>Anotações – ' + esc(t.nome) + '</h3><p>Onde parou, pontos de referência, fotos e vídeos para quem for continuar o território.</p>' +
+      (n.length ? '<div class="notas">' + n.slice().reverse().map(x => '<div class="notinha"><div class="nt-topo"><small>' + esc(x.nome) + ' · ' + br(x.data) + '' + '</small>' +
+        (admin ? '<button type="button" class="btn mini perigo" data-acao="obs-apagar" data-id="' + id + '|' + x.id + '">Apagar</button>' : '') + '</div>' +
+        (x.texto ? '<div class="nt-txt">' + esc(x.texto) + '</div>' : '') +
+        ((x.midias||[]).length ? '<div class="midias">' + x.midias.map(m => '<div class="midia" data-mid="' + m.id + '" data-tipo="' + m.tipo + '">…</div>').join('') + '</div>' : '') + '</div>').join('') + '</div>'
+        : '<div class="vaziotxt" style="margin-bottom:10px">Nenhuma anotação neste território ainda.</div>') +
+      '<h4>Nova anotação</h4>' +
+      '<div class="campo"><label for="f-otxt">Onde parou / observações</label><textarea id="f-otxt" placeholder="Ex.: parei na Rua das Flores, n.º 120, lado direito. Falta a viela depois do mercado."></textarea></div>' +
+      '<div class="campo"><label for="f-oarq">Fotos ou vídeos (opcional)</label><input id="f-oarq" type="file" accept="image/*,video/*" multiple></div>' +
+      '<div class="campo"><label for="f-onome">Seu nome</label><input id="f-onome" autocomplete="name" value="' + esc(ultimoNome) + '"></div>' + botoes('Salvar anotação') + '</form>', true);
+    mostrarMidias(); },
+  'obs-apagar'(par){ const p = par.split('|'), t = terr(p[0]), n = t && (t.notas||[]).find(x => x.id===p[1]); if(!n || !admin) return;
+    (n.midias||[]).forEach(m => midiaDel(m.id).catch(() => {})); t.notas = t.notas.filter(x => x!==n); salvar(); desenhar(); janelas.obs(p[0]); toast('Anotação apagada.'); },
+  'copia-restaurar'(id){ const c = (copias||[]).find(x => x.id===id); if(!c || !admin) return;
+    abrir('<form data-form="copia-restaurar" data-id="' + esc(id) + '"><h3>Restaurar esta cópia?</h3><p>Os dados de todos voltam a ser os de <b>' + esc(c.quando) + '</b>. O que foi feito depois disso some da tela, mas antes de restaurar o sistema guarda uma cópia de como está agora.</p>' + botoes('Restaurar', 'perigo') + '</form>'); },
+  'camp-encerrar'(){ if(!admin || !camp()) return;
+    abrir('<form data-form="camp-encerrar"><h3>Encerrar a campanha?</h3><p>' + esc(camp().nome) + ': ' + camp().feitos.length + ' de ' + camp().total + ' territórios concluídos. O rodízio normal volta do ponto em que estava. Os territórios da campanha que ficaram sem concluir são liberados.</p>' + botoes('Encerrar campanha', 'perigo') + '</form>'); },
+  zerar(){ abrir('<form data-form="zerar"><h3>Zerar tudo?</h3><p>Apaga para todos as conclusões registradas pelo sistema, as anotações e as alterações de cadastro, e volta ao cadastro inicial. A senha continua a mesma.</p>' + botoes('Apagar tudo', 'perigo') + '</form>'); }
+};
+const val = id => { const e = document.getElementById(id); return e ? (e.value || '').trim() : ''; };
+const erro = m => { document.getElementById('erro').textContent = m; };
+const envios = {
+  concluir(id){ const nome = val('f-nome'), data = val('f-data');
+    if(!nome) return erro('Informe seu nome.'); if(!data) return erro('Informe a data de conclusão.'); if(data > hojeISO()) return erro('A data não pode ser futura.');
+    ultimoNome = nome; const msg = concluir(id, nome, data); fechar(); desenhar(); toast(msg); },
+  pegar(id){ const v = vaga(id), nome = val('f-pnome'); if(!v || !v.terr || v.pego){ fechar(); return desenhar(); }
+    if(!nome) return erro('Informe seu nome.');
+    const tid = val('f-pterr') || v.terr;
+    if(tid !== v.terr && !alternativas(v).some(a => a.id===tid)) return erro('Esse território não está mais livre. Feche e abra de novo.');
+    if(tid !== v.terr){ S.vagas.forEach(w => { if(w!==v && w.terr===tid && !w.pego) w.terr = null; }); v.terr = tid; }
+    v.pego = true; v.por = nome; v.desde = hojeISO(); ultimoNome = nome; preencherVazias(); salvar(); fechar(); desenhar();
+    toast(terr(tid).nome + ' em andamento: ' + nomeVaga(v) + '.'); },
+  adm(){ if(sha256(val('f-senha')) !== S.senha) return erro('Senha incorreta.'); admin = true; fechar(); desenhar(); },
+  trocar(id){ const v = vaga(id); v.terr = val('f-terr') || null; v.pego = false; v.por = ''; v.desde = hojeISO(); salvar(); fechar(); desenhar(); },
+  editar(id){ const nome = val('f-tnome'), link = val('f-link'), video = val('f-video'); if(!nome) return erro('Informe o nome.'); if((link && !linkOk(link)) || (video && !linkOk(video))) return erro('Os links precisam começar com https://');
+    let t = terr(id); if(!t){ t = {id:'n'+Date.now(), feitos:[], ciclo:1, notas:[]}; S.territorios.push(t); }
+    Object.assign(t, {nome, link, video, tipo:val('f-tipo'), ativo:val('f-ativo')==='1'});
+    if(!t.ativo) S.vagas.forEach(v => { if(v.terr===t.id) v.terr = null; });
+    preencherVazias(); salvar(); fechar(); desenhar(); },
+  saida(id){ const v = vaga(id); v.local = val('f-local'); v.dirigente = val('f-dir');
+    if(v.turno==='rural') v.grupo = val('f-grupo') || v.grupo; else if(v.turno!=='afastado') v.turno = val('f-turno') || v.turno;
+    salvar(); fechar(); desenhar(); },
+  senha(){ const n = val('f-nova'); if(n.length < 8) return erro('Use pelo menos 8 caracteres.'); S.senha = sha256(n); salvar(); fechar(); toast('Senha alterada.'); },
+  desfazer(id){ desfazer(id); fechar(); desenhar(); toast('Conclusão desfeita.'); },
+  escala(orig){ if(!admin) return; const data = val('f-edata'), nome = val('f-enome');
+    if(!data) return erro('Informe a data.'); if(new Date(data + 'T12:00:00').getDay()!==6) return erro('Essa data não é um sábado.'); if(!nome) return erro('Informe o dirigente.');
+    S.escala = (S.escala||[]).filter(x => x.data!==orig && x.data!==data); S.escala.push({data, nome}); S.escala.sort((a,b) => a.data.localeCompare(b.data));
+    salvar(); fechar(); desenhar(); toast('Escala atualizada.'); },
+  async obs(id){ const t = terr(id), texto = val('f-otxt'), nome = val('f-onome'), arqs = [...document.getElementById('f-oarq').files], fixa = false;
+    if(!texto && !arqs.length) return erro('Escreva a anotação ou escolha uma foto ou vídeo.');
+    if(!nome) return erro('Informe seu nome.');
+    if(arqs.length > 6) return erro('Envie no máximo 6 arquivos por anotação.');
+    if(arqs.some(a => a.type.startsWith('video/') && a.size > 25*1048576)) return erro('Vídeo muito grande. Use vídeos curtos, de até 25 MB.');
+    const bt = camada.querySelector('button[type=submit]'); bt.disabled = true; bt.textContent = 'Salvando…';
+    const midias = []; let falhou = 0;
+    for(const a of arqs){ const video = a.type.startsWith('video/'); bt.textContent = 'Enviando arquivo ' + (midias.length + falhou + 1) + ' de ' + arqs.length + '…';
+      try{ const mid = await midiaPut(a, video ? a : await reduzir(a)); midias.push({id:mid, tipo:video ? 'video' : 'foto'}); }catch(e){ falhou++; } }
+    if(!texto && !midias.length){ bt.disabled = false; bt.textContent = 'Salvar anotação'; return erro('Não consegui enviar os arquivos. Confira a internet e tente de novo.'); }
+    ultimoNome = nome; const tt = terr(id) || t; (tt.notas = tt.notas || []).push({id:'o' + Date.now(), texto, nome, data:hojeISO(), fixa, midias}); salvar(); fechar(); desenhar();
+    toast(falhou ? 'Anotação salva, mas ' + falhou + ' arquivo(s) não puderam ser enviados.' : 'Anotação salva em ' + t.nome + '.'); },
+  async 'copia-restaurar'(id){ if(!admin) return; const bt = camada.querySelector('button[type=submit]'); bt.disabled = true; bt.textContent = 'Restaurando…';
+    try{ const r = await api({acao:'restaurar', id});
+      if(!r.ok || !r.estado) throw new Error(r.erro || 'erro');
+      S = r.estado; versao = r.versao; migrar(); guardarLocal(); copias = null; fechar(); desenhar(); toast('Cópia restaurada.');
+    }catch(e){ bt.disabled = false; bt.textContent = 'Restaurar'; erro('Não consegui restaurar. Confira a internet e tente de novo.'); } },
+  'camp-iniciar'(){ if(!admin || camp()) return; const nome = val('f-cnome'), fim = val('f-cfim');
+    const tipos = Object.keys(TIPOS).filter(k => document.getElementById('f-ct-' + k).checked);
+    if(!nome) return erro('Dê um nome para a campanha.'); if(!tipos.length) return erro('Marque pelo menos um tipo de território.'); if(fim && fim < hojeISO()) return erro('A data de fim já passou.');
+    iniciarCampanha(nome, fim, tipos); salvar(); desenhar(); toast('Campanha iniciada. A tela Semana já mostra os territórios dela.'); },
+  'camp-encerrar'(){ if(!admin || !camp()) return; encerrarCampanha(); salvar(); fechar(); desenhar(); toast('Campanha encerrada. O rodízio normal voltou.'); },
+  textos(){ if(!admin) return; const l = val('f-textos').split('\n').map(x => x.trim()).filter(Boolean);
+    if(l.length > 60) return erro('Use no máximo 60 textos.'); if(l.some(x => x.length > 400)) return erro('Algum texto está muito longo. Use até 400 letras por linha.');
+    S.textos = l; salvar(); desenhar(); toast(l.length ? 'Textos salvos.' : 'Lista vazia: nenhum texto aparece no topo.'); },
+  zerar(){ const senha = S.senha, escala = S.escala; const textos = S.textos; dadosIniciais(); S.senha = senha; if(escala) S.escala = escala; if(textos) S.textos = textos; salvar(); fechar(); desenhar(); toast('Dados zerados.'); }
+};
 
-const hoje = new Date()
-const inicioSemana = new Date(hoje)
-inicioSemana.setDate(hoje.getDate() - hoje.getDay())
+/* ============ EVENTOS ============ */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-acao]'); if(!el) return;
+  const a = el.dataset.acao, id = el.dataset.id;
+  if(a==='recarregar') return carregar();
+  if(!S) return;
+  if(a==='fechar-fundo'){ if(e.target===el) fechar(); return; }
+  if(a==='fechar') return fechar();
+  if(a==='mes'){ const d = new Date(mesRef.a, mesRef.m + Number(id), 1); mesRef = {a:d.getFullYear(), m:d.getMonth()}; return desenhar(); }
+  // O link abre o WhatsApp com a mensagem pronta; por garantia, o endereço também vai para a área de transferência.
+  if(a==='zap-link'){ try{ navigator.clipboard.writeText(linkProgramacao()).then(() => toast('Escolha a conversa no WhatsApp. O link também foi copiado.'), () => {}); }catch(err){} return; }
+  if(a==='copias-atualizar'){ copias = null; return desenhar(); }
+  if(a==='copia-agora'){ if(!admin) return; el.disabled = true; el.textContent = 'Copiando…';
+    api({acao:'copiar'}).then(r => { toast(r && r.ok ? 'Cópia feita.' : 'Não consegui fazer a cópia. A planilha pode estar com a versão antiga do código.'); copias = null; desenhar(); },
+      () => { toast('Não consegui fazer a cópia. Confira a internet.'); desenhar(); }); return; }
+  if(a==='copiar-link'){ const campo = document.getElementById('f-link');
+    const feito = () => toast('Link copiado. Agora é só colar no grupo.'), manual = () => { campo.focus(); campo.select(); toast('Segure o dedo sobre o link e escolha Copiar.'); };
+    try{ navigator.clipboard.writeText(campo.value).then(feito, manual); }catch(err){ manual(); } return; }
+  if(a==='pdf') return baixarPdf();
+  if(a==='zoom'){ el.classList.toggle('grande'); return; }
+  if(a==='ano'){ anoServ += Number(id); return desenhar(); }
+  if(janelas[a]) janelas[a](id);
+});
+document.addEventListener('submit', e => { e.preventDefault(); const f = e.target.dataset.form; if(envios[f]) envios[f](e.target.dataset.id); });
+document.addEventListener('keydown', e => { if(e.key==='Escape') fechar(); });
+window.addEventListener('hashchange', desenhar);
 
-const { data: historicoSemana } = await client
-.from('historico')
-.select('territorio')
-.gte('data_conclusao', inicioSemana.toISOString())
-
-const usadosSemana = historicoSemana ? historicoSemana.map(t => parseInt(t.territorio)) : []
-
-const { data: controle } = await client
-.from('controle_rotacao')
-.select('proximo_territorio')
-.eq('id',1)
-.single()
-
-let candidato = controle.proximo_territorio
-
-while(usadosSemana.includes(candidato)){
-
-candidato++
-
-if(candidato > TOTAL_TERRITORIOS){
-candidato = 1
-}
-
-}
-
-let novoProximo = candidato + 1
-
-if(novoProximo > TOTAL_TERRITORIOS){
-novoProximo = 1
-}
-
-await client
-.from('controle_rotacao')
-.update({ proximo_territorio: novoProximo })
-.eq('id',1)
-
-await client
-.from('territorio_em_uso')
-.update({
-territorio_id: null,
-responsavel: null,
-status: "disponivel"
-})
-.eq('territorio_id', candidato)
-
-await client
-.from('territorio_em_uso')
-.update({
-territorio_id: candidato,
-responsavel: null,
-status: "disponivel"
-})
-.eq('dia_semana', dia)
-
-carregarSemana()
-
-}
-
-carregarSemana()
-
-client
-.channel('territorios')
-.on(
-'postgres_changes',
-{ event: '*', schema: 'public', table: 'territorio_em_uso' },
-payload => {
-carregarSemana()
-}
-)
-.subscribe()
-
+carregar();
+// Confere a planilha de tempos em tempos e sempre que a pessoa volta para a página.
+setInterval(() => { if(diaMostrado !== hojeISO()) desenhar(); if(!document.hidden) buscar(); }, 45000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) buscar(); });
 </script>
-
 </body>
 </html>
