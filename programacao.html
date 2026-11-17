@@ -77,7 +77,7 @@ footer{text-align:center;font-size:13px;color:var(--muted);padding:0 16px 30px}
 
 <script>
 // Mesmo endereço de dados do sistema de territórios. Esta página só lê; não grava nada.
-const API = 'https://script.google.com/macros/s/AKfycbwIQ8tjTElIPLK0ZMDGzQ4hxJzZnez54UYmzvo2FXP6K-OORdyY8TeGVV8lqe-YhxvT/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwFf7FGCqqD0tLS-Uu87QBTE8toIQSTmswOY3L20LdcN_bRSyArLJGpXV-_TF8a3w/exec';
 const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const TIPO = {afastado:'Afastado', rural:'Rural'};
 let S = null, diaMostrado = '';
@@ -120,7 +120,7 @@ function cartao(v, data, rural){
     h += '<div class="tags">' + (TIPO[t.tipo] ? '<span class="pill esp">' + TIPO[t.tipo] + '</span>' : '') +
       (v.pego ? '<span class="pill ok">Em andamento</span>' : '<span class="pill">Previsto</span>') + '</div>';
     if(linkOk(t.link)) h += '<a class="mapa" href="' + esc(t.link) + '" target="_blank" rel="noopener">Ver cartão do território</a> ';
-    if(linkOk(t.video)) h += '<a class="mapa" href="' + esc(t.video) + '" target="_blank" rel="noopener">▶ Vídeo do território</a>';
+    if(linkOk(t.video)) h += '<a class="mapa" href="' + esc(t.video) + '" target="_blank" rel="noopener">▶ Veja o território</a>';
   }
   return h + '</div>';
 }
