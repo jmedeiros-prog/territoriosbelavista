@@ -147,6 +147,7 @@ td small{display:block;font-weight:400;color:var(--muted);font-size:12px}
 .livre .btn.mini{display:flex;align-items:center}
 .btn.semvideo{opacity:.6}
 .rel-info{font-size:13px;color:var(--muted)}
+.camp-tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--accent-ink);background:var(--accent);border-radius:5px;padding:1px 5px;vertical-align:1px}
 .linha.rel{flex-wrap:wrap}
 .linha.rel>div:first-child{flex:1 1 220px}
 .linha.rel .rel-bt{display:flex;gap:6px;flex:1 1 100%;justify-content:flex-end}
@@ -667,6 +668,18 @@ function telaControle(){
   return h;
 }
 let anoServ = (() => { const d = new Date(); return d.getMonth()>=8 ? d.getFullYear()+1 : d.getFullYear(); })();
+// Designações de um território no ano de serviço, em ordem. As feitas em campanha levam "CAMP" antes do nome,
+// e quando uma campanha começa pula-se uma coluna (fica uma em branco) para separar do rodízio normal.
+function regsDe(t, ini, fim){
+  const l = S.historico.filter(x => x.terr===t.id && x.data>=ini && x.data<=fim).map(x => ({para:x.para || x.nome, desig:x.desig || '', concl:x.data, camp:x.camp || ''}))
+    .sort((a,b) => (a.desig||a.concl).localeCompare(b.desig||b.concl));
+  const v = S.vagas.find(x => x.terr===t.id && x.pego);
+  if(v && v.desde>=ini && v.desde<=fim) l.push({para:dirigenteDe(v), desig:v.desde, concl:'', camp:camp() ? camp().nome : ''});
+  const out = [];
+  l.forEach((r, i) => { if(r.camp && i>0 && l[i-1].camp!==r.camp) out.push(null); out.push(r); });
+  return out;
+}
+const nomeReg = r => (r.camp ? 'CAMP ' : '') + r.para;
 function telaRegistro(){
   const ini = (anoServ-1) + '-09-01', fim = anoServ + '-08-31';
   let h = '<div class="mes"><button class="btn mini leve" data-acao="ano" data-id="-1" aria-label="Ano anterior">◀</button><strong>Ano de serviço ' + anoServ +
@@ -677,20 +690,17 @@ function telaRegistro(){
   for(const tipo of Object.keys(TIPOS)){
     h += '<tr class="grupo"><td colspan="6">' + TIPOS[tipo] + '</td></tr>';
     for(const t of S.territorios.filter(x => x.ativo && x.tipo===tipo)){
-      const regs = S.historico.filter(x => x.terr===t.id && x.data>=ini && x.data<=fim).map(x => ({para:x.para || x.nome, desig:x.desig || '', concl:x.data}))
-        .sort((a,b) => (a.desig||a.concl).localeCompare(b.desig||b.concl));
-      const v = S.vagas.find(x => x.terr===t.id && x.pego);
-      if(v && v.desde>=ini && v.desde<=fim) regs.push({para:dirigenteDe(v), desig:v.desde, concl:''});
+      const regs = regsDe(t, ini, fim);
       let antes = ''; for(const x of S.historico){ if(x.terr===t.id && x.data<ini && x.data>antes) antes = x.data; }
       for(let i=0; i<Math.max(1, Math.ceil(regs.length/4)); i++){
         h += '<tr><td>' + (i ? '' : esc(t.nome)) + '</td><td>' + (i || !antes ? '' : br(antes)) + '</td>';
         for(let j=0; j<4; j++){ const r = regs[i*4+j];
-          h += '<td>' + (r ? '<b>' + esc(r.para) + '</b><small>' + (r.desig ? brCurto(r.desig) : '?') + ' → ' + (r.concl ? brCurto(r.concl) : 'em andamento') + '</small>' : '') + '</td>'; }
+          h += '<td>' + (r ? '<b>' + (r.camp ? '<span class="camp-tag" title="Campanha: ' + esc(r.camp) + '">CAMP</span> ' : '') + esc(r.para) + '</b><small>' + (r.desig ? brCurto(r.desig) : '?') + ' → ' + (r.concl ? brCurto(r.concl) : 'em andamento') + '</small>' : '') + '</td>'; }
         h += '</tr>';
       }
     }
   }
-  return h + '</tbody></table></div><div class="legenda"><span>Em cada designação: para quem foi designado, data da designação → data da conclusão.</span></div>';
+  return h + '</tbody></table></div><div class="legenda"><span>Em cada designação: para quem foi designado, data da designação → data da conclusão.</span><span><span class="camp-tag">CAMP</span> designação feita em campanha. Quando a campanha começa, fica uma coluna em branco para separar.</span></div>';
 }
 // Gera a folha "Registro de Designação de Território" em PDF, no formato do formulário.
 async function baixarPdf(){
@@ -698,15 +708,12 @@ async function baixarPdf(){
   const ini = (anoServ-1) + '-09-01', fim = anoServ + '-08-31', corpo = [];
   const centro = {halign:'center', valign:'middle'};
   for(const t of S.territorios.filter(x => x.ativo)){
-    const regs = S.historico.filter(x => x.terr===t.id && x.data>=ini && x.data<=fim).map(x => ({para:x.para || x.nome, desig:x.desig || '', concl:x.data}))
-      .sort((a,b) => (a.desig||a.concl).localeCompare(b.desig||b.concl));
-    const v = S.vagas.find(x => x.terr===t.id && x.pego);
-    if(v && v.desde>=ini && v.desde<=fim) regs.push({para:dirigenteDe(v), desig:v.desde, concl:''});
+    const regs = regsDe(t, ini, fim);
     let antes = ''; for(const x of S.historico){ if(x.terr===t.id && x.data<ini && x.data>antes) antes = x.data; }
     for(let i=0; i<Math.max(1, Math.ceil(regs.length/4)); i++){
       const a = [{content:t.nome, rowSpan:2, styles:Object.assign({fontStyle:'bold'}, centro)}, {content:i ? '' : br(antes), rowSpan:2, styles:centro}], b = [];
       for(let j=0; j<4; j++){ const r = regs[i*4+j];
-        a.push({content:r ? r.para.toUpperCase() : '', colSpan:2, styles:centro});
+        a.push({content:r ? nomeReg(r).toUpperCase() : '', colSpan:2, styles:centro});
         b.push({content:r && r.desig ? brCurto(r.desig) : '', styles:centro}, {content:r && r.concl ? brCurto(r.concl) : '', styles:centro}); }
       corpo.push(a, b);
     }
@@ -722,7 +729,7 @@ async function baixarPdf(){
     body:corpo, styles:{fontSize:8, cellPadding:1.4, lineColor:[90,90,90], lineWidth:0.2, textColor:[20,20,20], minCellHeight:6},
     headStyles:{fillColor:[225,232,244], textColor:[20,20,20], halign:'center', valign:'middle', fontStyle:'bold'},
     columnStyles:{0:{cellWidth:33}, 1:{cellWidth:24}},
-    didDrawPage:() => { doc.setFontSize(7); doc.text('*Ao iniciar uma nova folha, use esta coluna para registrar a data em que cada território foi concluído pela última vez.', 10, 203); }});
+    didDrawPage:() => { doc.setFontSize(7); doc.text('CAMP = designação feita em campanha. Quando a campanha começa, uma coluna fica em branco para separar do rodízio normal.', 10, 199.5); doc.text('*Ao iniciar uma nova folha, use esta coluna para registrar a data em que cada território foi concluído pela última vez.', 10, 203); }});
   const nome = 'registro-de-territorios-' + anoServ + '.pdf';
   try{
     const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
